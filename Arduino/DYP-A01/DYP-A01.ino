@@ -8,10 +8,13 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
-unsigned char data[4] = {};
-float distance;
+#define CONTROL_PIN 5   // This is the YELLOW wire, can be any data line
 
-// OLED display initialization
+int16_t distance;  // The last measured distance
+bool newData = false; // Whether new data is available from the sensor
+uint8_t buffer[4];  // our buffer for storing data
+uint8_t idx = 0;  // our idx into the storage buffer
+
 void setupOLED() {
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
     Serial.println(F("SSD1306 allocation failed"));
@@ -24,66 +27,60 @@ void setupOLED() {
 }
 
 void setup() {
-  Serial.begin(57600); // Initialize the USB serial for debugging
-  Serial1.begin(9600); // Initialize Serial1 for communication
-  
+  Serial.begin(115200);
+  while (!Serial) {
+    delay(10); // wait for serial port to connect. Needed for native USB port only
+  }
+
+  Serial.println("Adafruit DYP-ME007YS Test");
+
+  // set the data rate for the Serial port, 9600 for the sensor
+  Serial1.begin(9600);
+  pinMode(CONTROL_PIN, OUTPUT);
+  digitalWrite(CONTROL_PIN, HIGH);
+
   setupOLED(); // Initialize OLED display
 }
 
-void loop() {
-  if (Serial1.available() >= 4) // Check if there are at least 4 bytes available
-  {
-    for (int i = 0; i < 4; i++)
-    {
-      data[i] = Serial1.read();
+void loop() { // run over and over
+  if (Serial1.available()) {
+    uint8_t c = Serial1.read();
+    //Serial.println(c, HEX);
+
+    // See if this is a header byte
+    if (idx == 0 && c == 0xFF) {
+      buffer[idx++] = c;
     }
-    
-    if (data[0] == 0xff)
-    {
-      int sum = (data[0] + data[1] + data[2]) & 0x00FF;
-      if (sum == data[3])
-      {
-        distance = (data[1] << 8) + data[2];
-        if (distance > 280)
-        {
-          Serial.print("distance=");
-          Serial.print(distance / 10);
-          Serial.println("cm");
-
-          // Display on OLED
-          display.clearDisplay();
-          display.setCursor(0, 10);
-          display.setTextSize(1);  // Ensure text size is set
-          String distanceString = "Distance=" + String(distance / 10, 1) + " cm";
-          Serial.print("Buffer content: ");
-          Serial.println(distanceString); // Debug: Print the buffer
-          display.println(distanceString);
-          display.display(); // Update the display with new content
-        }
-        else
-        {
-          Serial.println("Below the lower limit");
-
-          // Display on OLED
-          display.clearDisplay();
-          display.setCursor(0, 10);
-          display.setTextSize(1);  // Ensure text size is set
-          display.println("Below limit");
-          display.display(); // Update the display with new content
-        }
+    // Two middle bytes can be anything
+    else if ((idx == 1) || (idx == 2)) {
+      buffer[idx++] = c;
+    }
+    else if (idx == 3) {
+      uint8_t sum = 0;
+      sum = buffer[0] + buffer[1] + buffer[2];
+      if (sum == c) {
+        distance = ((uint16_t)buffer[1] << 8) | buffer[2];
+        newData = true;
       }
-      else
-      {ß
-        Serial.println("ERROR");
-
-        // Display on OLED
-        display.clearDisplay();
-        display.setCursor(0, 10);
-        display.setTextSize(1);  // Ensure text size is set
-        display.println("ERROR");
-        display.display(); // Update the display with new content
-      }
+      idx = 0;
     }
   }
-  delay(150);
+  
+  if (newData) {
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" mm");
+
+    // Display on OLED
+    display.clearDisplay();
+    display.setCursor(0, 10);
+    display.setTextSize(1);  // Ensure text size is set
+    String distanceString = "Distance=" + String(distance) + " mm";
+    //Serial.print("Buffer content: ");
+    //Serial.println(distanceString); // Debug: Print the buffer
+    display.println(distanceString);
+    display.display(); // Update the display with new content
+
+    newData = false;
+  }
 }
