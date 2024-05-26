@@ -1,2 +1,2 @@
 /Data
-/ESP8266/plant_monitor/arduino_secrets.h
+/Arduino/test/arduino_secrets.h
