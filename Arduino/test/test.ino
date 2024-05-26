@@ -73,9 +73,9 @@ void read_sensor() {
 }
 
 void print_data() {
-  Serial.print("distance = ");
-  Serial.print(distance);
-  Serial.println(" mm");
+  //Serial.print("distance = ");
+  //Serial.print(distance);
+  //Serial.println(" mm");
 
   // Display on OLED
   display.clearDisplay();
@@ -87,7 +87,8 @@ void print_data() {
 }
 
 void sendLoRaMessage() {
-  String payload = "Distance=" + String(distance) + " mm";
+  String payload = String(distance);
+  Serial.println(distance);
   int err;
 
   modem.beginPacket();
