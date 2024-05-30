@@ -1,11 +1,34 @@
+#include <MKRWAN.h>
+#include "arduino_secrets.h"
+
 unsigned long previousMillis = 0; // Store the last time the sensor was read
-const long interval = 10000; // Interval to read the sensor (5000 milliseconds or 5 seconds)
+const long interval = 60000; // Interval to read the sensor (10000 milliseconds or 10 seconds)
+
+LoRaModem modem;
 
 void setup() {
   // Start the serial communication with the sensor and the serial monitor
   Serial.begin(9600);   // Serial monitor
   Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
   Serial.println("Ultrasonic Sensor UART Test");
+
+  // Initialize LoRa module
+  if (!modem.begin(EU868)) {
+    Serial.println("Failed to start module");
+    while (1) {}
+  }
+  Serial.print("Your module version is: ");
+  Serial.println(modem.version());
+  Serial.print("Your device EUI is: ");
+  Serial.println(modem.deviceEUI());
+
+  // Join the network
+  int connected = modem.joinOTAA(SECRET_APP_EUI, SECRET_APP_KEY);
+  if (!connected) {
+    Serial.println("Failed to join the network");
+    while (1) {}
+  }
+  Serial.println("Successfully joined the network");
 }
 
 void loop() {
@@ -48,6 +71,19 @@ void loop() {
               Serial.print("Distance: ");
               Serial.print(distance);
               Serial.println(" mm");
+
+              // Prepare payload
+              String payload =String(distance);
+
+              // Send data over LoRa
+              modem.beginPacket();
+              modem.print(payload);
+              int err = modem.endPacket(true);  // true means async mode
+              if (err > 0) {
+                Serial.println("Message sent correctly!");
+              } else {
+                Serial.println("Error sending message :(");
+              }
             } else {
               Serial.println("Checksum error");
               Serial.print("Data_H: ");
