@@ -1,86 +1,73 @@
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 32 // OLED display height, in pixels
-
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-
-#define CONTROL_PIN 5   // This is the YELLOW wire, can be any data line
-
-int16_t distance;  // The last measured distance
-bool newData = false; // Whether new data is available from the sensor
-uint8_t buffer[4];  // our buffer for storing data
-uint8_t idx = 0;  // our idx into the storage buffer
-
-void setupOLED() {
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
-    Serial.println(F("SSD1306 allocation failed"));
-    for (;;); // Don't proceed, loop forever
-  }
-  display.clearDisplay();
-  display.setTextSize(1);      // Set text size
-  display.setTextColor(WHITE); // Set text color
-  display.display();           // Display the initialized screen
-}
+unsigned long previousMillis = 0; // Store the last time the sensor was read
+const long interval = 10000; // Interval to read the sensor (5000 milliseconds or 5 seconds)
 
 void setup() {
-  Serial.begin(115200);
-  while (!Serial) {
-    delay(10); // wait for serial port to connect. Needed for native USB port only
-  }
-
-  Serial.println("Adafruit DYP-ME007YS Test");
-
-  // set the data rate for the Serial port, 9600 for the sensor
-  Serial1.begin(9600);
-  pinMode(CONTROL_PIN, OUTPUT);
-  digitalWrite(CONTROL_PIN, HIGH);
-
-  setupOLED(); // Initialize OLED display
+  // Start the serial communication with the sensor and the serial monitor
+  Serial.begin(9600);   // Serial monitor
+  Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
+  Serial.println("Ultrasonic Sensor UART Test");
 }
 
-void loop() { // run over and over
-  if (Serial1.available()) {
-    uint8_t c = Serial1.read();
-    //Serial.println(c, HEX);
-
-    // See if this is a header byte
-    if (idx == 0 && c == 0xFF) {
-      buffer[idx++] = c;
-    }
-    // Two middle bytes can be anything
-    else if ((idx == 1) || (idx == 2)) {
-      buffer[idx++] = c;
-    }
-    else if (idx == 3) {
-      uint8_t sum = 0;
-      sum = buffer[0] + buffer[1] + buffer[2];
-      if (sum == c) {
-        distance = ((uint16_t)buffer[1] << 8) | buffer[2];
-        newData = true;
-      }
-      idx = 0;
-    }
-  }
+void loop() {
+  unsigned long currentMillis = millis();
   
-  if (newData) {
-    Serial.print("Distance: ");
-    Serial.print(distance);
-    Serial.println(" mm");
+  if (currentMillis - previousMillis >= interval) {
+    // Save the last time the sensor was read
+    previousMillis = currentMillis;
 
-    // Display on OLED
-    display.clearDisplay();
-    display.setCursor(0, 10);
-    display.setTextSize(1);  // Ensure text size is set
-    String distanceString = "Distance=" + String(distance) + " mm";
-    //Serial.print("Buffer content: ");
-    //Serial.println(distanceString); // Debug: Print the buffer
-    display.println(distanceString);
-    display.display(); // Update the display with new content
+    // Clear the serial buffer
+    while (Serial1.available()) {
+      Serial1.read();
+    }
+    
+    // Send a trigger pulse
+    Serial1.write(0x55); // Sending any data to trigger the sensor
 
-    newData = false;
+    // Wait for the response with a timeout mechanism
+    unsigned long responseTimeout = millis() + 100; // 100ms timeout
+    while (millis() < responseTimeout) {
+      if (Serial1.available()) {
+        // Read the frame header
+        if (Serial1.read() == 0xFF) {
+          // Ensure enough data is available
+          while (Serial1.available() < 3 && millis() < responseTimeout) {
+            // Wait for the remaining data to be available
+          }
+
+          if (Serial1.available() >= 3) {
+            // Read the next three bytes
+            byte Data_H = Serial1.read();
+            byte Data_L = Serial1.read();
+            byte SUM = Serial1.read();
+
+            // Verify checksum
+            byte calculatedSUM = (0xFF + Data_H + Data_L) & 0xFF;
+            if (calculatedSUM == SUM) {
+              // Calculate distance
+              int distance = (Data_H << 8) + Data_L;
+              Serial.print("Distance: ");
+              Serial.print(distance);
+              Serial.println(" mm");
+            } else {
+              Serial.println("Checksum error");
+              Serial.print("Data_H: ");
+              Serial.print(Data_H, HEX);
+              Serial.print(", Data_L: ");
+              Serial.print(Data_L, HEX);
+              Serial.print(", SUM: ");
+              Serial.print(SUM, HEX);
+              Serial.print(", Calculated SUM: ");
+              Serial.println(calculatedSUM, HEX);
+            }
+          } else {
+            Serial.println("Timeout waiting for full data packet");
+          }
+          // Break the loop after reading and processing the data once
+          break;
+        }
+      }
+    }
   }
+
+  // Other tasks can be performed here without blocking
 }
