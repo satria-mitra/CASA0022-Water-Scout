@@ -2,11 +2,26 @@
 #include <ArduinoLowPower.h>
 #include "arduino_secrets.h"
 
-const long interval = 60000; // Interval to wake up (60000 milliseconds or 60 seconds)
+const int sensorPowerPin = 4; // Pin to control MOSFET gate
+int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
 
 LoRaModem modem;
 
 void setup() {
+  // Disable unused peripherals
+  // ADC->CTRLA.bit.ENABLE = 0;
+  // while (ADC->STATUS.bit.SYNCBUSY);
+
+  // DAC->CTRLA.bit.ENABLE = 0;
+  // while (DAC->STATUS.bit.SYNCBUSY);
+
+  // SERCOM4->USART.CTRLA.bit.ENABLE = 0;
+  // while (SERCOM4->USART.SYNCBUSY.bit.ENABLE);
+
+  // Initialize the sensor power pin
+  pinMode(sensorPowerPin, OUTPUT);
+  digitalWrite(sensorPowerPin, LOW); // Ensure the sensor is off initially
+
   // Start the serial communication with the sensor and the serial monitor
   Serial.begin(9600);   // Serial monitor
   Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
@@ -29,19 +44,28 @@ void setup() {
     while (1) {}
   }
   Serial.println("Successfully joined the network");
+
+  // Attach wakeup function to handle wakeup event
+  //LowPower.attachInterruptWakeup(RTC_ALARM_WAKEUP, wakeup, CHANGE);
 }
 
 void loop() {
+  // Turn on the sensor by setting the MOSFET gate HIGH
+  Serial.println("Turning on the sensor...");
+  digitalWrite(sensorPowerPin, HIGH);
+  delay(2000); // Wait for the sensor to power up
+
   // Clear the serial buffer
   while (Serial1.available()) {
     Serial1.read();
   }
-  
+
   // Send a trigger pulse
   Serial1.write(0x55); // Sending any data to trigger the sensor
 
   // Wait for the response with a timeout mechanism
-  unsigned long responseTimeout = millis() + 100; // 100ms timeout
+  unsigned long responseTimeout = millis() + 200; // 100ms timeout
+  bool sensorDataReceived = false;
   while (millis() < responseTimeout) {
     if (Serial1.available()) {
       // Read the frame header
@@ -78,26 +102,35 @@ void loop() {
             } else {
               Serial.println("Error sending message :(");
             }
+            sensorDataReceived = true;
           } else {
             Serial.println("Checksum error");
-            Serial.print("Data_H: ");
-            Serial.print(Data_H, HEX);
-            Serial.print(", Data_L: ");
-            Serial.print(Data_L, HEX);
-            Serial.print(", SUM: ");
-            Serial.print(SUM, HEX);
-            Serial.print(", Calculated SUM: ");
-            Serial.println(calculatedSUM, HEX);
           }
         } else {
           Serial.println("Timeout waiting for full data packet");
         }
-        // Break the loop after reading and processing the data once
-        break;
+        break; // Exit the loop after reading data
       }
     }
   }
 
+  if (!sensorDataReceived) {
+    Serial.println("No sensor data received");
+  }
+
+  // Turn off the sensor to save power
+  Serial.println("Turning off the sensor...");
+  digitalWrite(sensorPowerPin, LOW);
+
   // Put the board to sleep for the defined interval
-  LowPower.deepSleep(60000);
+  Serial.println("Entering sleep mode...");
+  LowPower.deepSleep(interval);
+}
+
+void wakeup() {
+  // This function will be called when the microcontroller wakes up
+  // Re-enable peripherals if needed
+  // Serial.begin(9600);   // Serial monitor
+  // Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
+  //Serial.println("Woke up from sleep");
 }
