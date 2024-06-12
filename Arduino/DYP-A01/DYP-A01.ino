@@ -13,7 +13,7 @@ V1.5
 #include <ArduinoLowPower.h>
 #include "arduino_secrets.h"
 
-/******** Pin and Variables for Solar Charge Controller **********/
+/******** Pin, Variables and Class for Solar Charge Controller **********/
 // Pin definitions for charge controller
 #define PGOOD_PIN 1  // Power Good status pin
 #define CHG_PIN 2    // Charge status pin
@@ -29,12 +29,6 @@ enum BatteryStatus { CHARGING = 0, FULL = 1, DRAINING = 2 };
 SolarStatus solar_status = OFF;
 BatteryStatus battery_status = DRAINING;
 
-
-/******** Pin and Variables for Ultrasonic Sensor **********/
-
-const int sensorPowerPin = 4; // Pin to control MOSFET gate
-int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
-
 // Class for Solar Charge Controller
 class DeviceHealth {
 public:
@@ -43,10 +37,37 @@ public:
   void updateDeviceHealth();
   void printDeviceHealth();
 };
+// Declare class globally
+DeviceHealth deviceHealth;
+
+
+/******** Pin, Variables and Class for Ultrasonic Sensor **********/
+
+const int sensorPowerPin = 4; // Pin to control MOSFET gate
+int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
+
+
+/******** Pin, Variables and Class for LoRaWAN Connections **********/
+#define JOIN_RETRY_SLEEP_MINUTES 30 // Rejoin LoRa Network in the next 30 minutes
+#define LORA_CONNECTION_STABILIZATION_DELAY_SECONDS 5 // Stabilize LoRa connections
+
+// Class for LoRaWAN Connection
+class LoRaWAN {
+public:
+  LoRaModem modem;
+  String appEui = SECRET_APP_EUI;
+  String appKey = SECRET_APP_KEY;
+  uint16_t packetCount = 0;
+
+  void init();
+  void executeDownlink();
+  void sendData(byte* payload, size_t payloadSize);
+};
 
 // Declare class globally
-LoRaModem modem;
-DeviceHealth deviceHealth;
+LoRaWAN lorawan;
+
+
 
 void setup() {
   //Disable unused peripherals
@@ -67,24 +88,10 @@ void setup() {
   Serial.begin(9600);   // Serial monitor
   Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
   Serial.println("Ultrasonic Sensor UART Test");
+  
+  // Initialize LoRaWAN Connections
+  lorawan.init();
 
-  // Initialize LoRa module
-  if (!modem.begin(EU868)) {
-    Serial.println("Failed to start module");
-    while (1) {}
-  }
-  Serial.print("Your module version is: ");
-  Serial.println(modem.version());
-  Serial.print("Your device EUI is: ");
-  Serial.println(modem.deviceEUI());
-
-  // Join the network
-  int connected = modem.joinOTAA(SECRET_APP_EUI, SECRET_APP_KEY);
-  if (!connected) {
-    Serial.println("Failed to join the network");
-    while (1) {}
-  }
-  Serial.println("Successfully joined the network");
 
   // Attach wakeup function to handle wakeup event
   //LowPower.attachInterruptWakeup(RTC_ALARM_WAKEUP, wakeup, CHANGE);
@@ -166,6 +173,67 @@ void loop() {
   // Put the board to sleep for the defined interval
   //Serial.println("Entering sleep mode...");
   LowPower.deepSleep(interval);
+}
+
+void LoRaWAN::init() {
+  int joinAttempts = 0;
+    // Initialize LoRa module
+  if (!modem.begin(EU868)) {
+    Serial.println("Failed to start module");
+    while (1) {}
+  }
+  Serial.print("Your module version is: ");
+  Serial.println(modem.version());
+  Serial.print("Your device EUI is: ");
+  Serial.println(modem.deviceEUI());
+
+  // Join the network
+  int connected = modem.joinOTAA(appEui, appKey);
+
+  // Attempt to reconnect to LoRa
+  while (!connected && joinAttempts < MAX_JOIN_ATTEMPTS) {
+    joinAttempts++;
+    Serial.println("Not connected, trying again...");
+    delay(JOIN_RETRY_DELAY_MINUTES * 60 * 1000);  // wait before next attempt
+    connected = modem.joinOTAA(appEui, appKey);
+  }
+
+  if (connected) {
+    Serial.println("Successfully joined the network");
+  } else {
+    Serial.println("Failed to join network after several attempts. The device is going into a low power mode before trying again.");
+    LowPower.sleep(JOIN_RETRY_SLEEP_MINUTES * 60 * 1000);  // sleep
+    init();  // try to initialize the LoRaWAN connection again
+  }
+
+  modem.setADR(true);
+  modem.minPollInterval(60);
+  delay(LORA_CONNECTION_STABILIZATION_DELAY_SECONDS * 1000);  // wait to stabilize connection
+}
+
+void LoRaWAN::executeDownlink() {
+  int receivedData;
+  int i = 0;
+  while (modem.available()) {
+    receivedData += (char)modem.read();
+    i++;
+  }
+
+  if (i == 0) {
+    Serial.println("No downlink data received");
+    return;
+  }
+
+  Serial.println("Received downlink data: " + receivedData);
+
+  // If the received data is the "EXTRA_MEASURE" command, take an extra measurement
+  if (receivedData == 1) {
+    Serial.println("Command 1 received. Executing instant measurement...");
+    sensor.readData(*this);
+  } else {
+    Serial.println("Invalid command received.");
+    return;
+    }
 }
 
 // Function to update the status of the solar panel and battery
