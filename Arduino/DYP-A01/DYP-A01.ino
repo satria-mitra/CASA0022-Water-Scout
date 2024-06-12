@@ -46,10 +46,23 @@ DeviceHealth deviceHealth;
 const int sensorPowerPin = 4; // Pin to control MOSFET gate
 int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
 
+class DYP_A01 {
+public:
+  void readSensor();
+};
+
+// Declare class globally
+DYP_A01 sensor;
+
 
 /******** Pin, Variables and Class for LoRaWAN Connections **********/
+#define MAX_JOIN_ATTEMPTS 8
+#define JOIN_RETRY_DELAY_MINUTES 2 
 #define JOIN_RETRY_SLEEP_MINUTES 30 // Rejoin LoRa Network in the next 30 minutes
 #define LORA_CONNECTION_STABILIZATION_DELAY_SECONDS 5 // Stabilize LoRa connections
+
+// Payload in CayenneLPP Format
+byte payload[5];
 
 // Class for LoRaWAN Connection
 class LoRaWAN {
@@ -66,6 +79,7 @@ public:
 
 // Declare class globally
 LoRaWAN lorawan;
+
 
 
 
@@ -88,7 +102,7 @@ void setup() {
   Serial.begin(9600);   // Serial monitor
   Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
   Serial.println("Ultrasonic Sensor UART Test");
-  
+
   // Initialize LoRaWAN Connections
   lorawan.init();
 
@@ -98,78 +112,8 @@ void setup() {
 }
 
 void loop() {
-  // Turn on the sensor by setting the MOSFET gate HIGH
-  //Serial.println("Turning on the sensor...");
-  digitalWrite(sensorPowerPin, HIGH);
-  delay(2000); // Wait for the sensor to power up
-
-  // Clear the serial buffer
-  while (Serial1.available()) {
-    Serial1.read();
-  }
-
-  // Send a trigger pulse
-  Serial1.write(0x55); // Sending any data to trigger the sensor
-
-  // Wait for the response with a timeout mechanism
-  unsigned long responseTimeout = millis() + 200; // 100ms timeout
-  bool sensorDataReceived = false;
-  while (millis() < responseTimeout) {
-    if (Serial1.available()) {
-      // Read the frame header
-      if (Serial1.read() == 0xFF) {
-        // Ensure enough data is available
-        while (Serial1.available() < 3 && millis() < responseTimeout) {
-          // Wait for the remaining data to be available
-        }
-
-        if (Serial1.available() >= 3) {
-          // Read the next three bytes
-          byte Data_H = Serial1.read();
-          byte Data_L = Serial1.read();
-          byte SUM = Serial1.read();
-
-          // Verify checksum
-          byte calculatedSUM = (0xFF + Data_H + Data_L) & 0xFF;
-          if (calculatedSUM == SUM) {
-            // Calculate distance
-            int distance = (Data_H << 8) + Data_L;
-            // Serial.print("Distance: ");
-            // Serial.print(distance);
-            // Serial.println(" mm");
-
-            // Prepare payload
-            String payload = String(distance);
-
-            // Send data over LoRa
-            modem.beginPacket();
-            modem.print(payload);
-            int err = modem.endPacket(true);  // true means async mode
-            if (err > 0) {
-              Serial.println("Message sent correctly!");
-            } else {
-              Serial.println("Error sending message :(");
-            }
-            sensorDataReceived = true;
-          } else {
-            //Serial.println("Checksum error");
-          }
-        } else {
-          //Serial.println("Timeout waiting for full data packet");
-        }
-        break; // Exit the loop after reading data
-      }
-    }
-  }
-
-  if (!sensorDataReceived) {
-    Serial.println("No sensor data received");
-  }
-
-  // Turn off the sensor to save power
-  //Serial.println("Turning off the sensor...");
-  digitalWrite(sensorPowerPin, LOW);
-
+  sensor.readSensor();
+  lorawan.sendData(payload, sizeof(payload));
   // Put the board to sleep for the defined interval
   //Serial.println("Entering sleep mode...");
   LowPower.deepSleep(interval);
@@ -229,11 +173,101 @@ void LoRaWAN::executeDownlink() {
   // If the received data is the "EXTRA_MEASURE" command, take an extra measurement
   if (receivedData == 1) {
     Serial.println("Command 1 received. Executing instant measurement...");
-    sensor.readData(*this);
+    //sensor.readSensor();
   } else {
     Serial.println("Invalid command received.");
     return;
     }
+}
+
+void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
+  int err;
+  modem.beginPacket();
+  modem.write(payload, payloadSize);
+  err = modem.endPacket(true);
+
+  if (err > 0) {
+    packetCount++;
+    Serial.println("LoRa Packet sent");
+  } else {
+    Serial.println("Error sending LoRa Packet");
+  }
+}
+
+void DYP_A01::readSensor() {
+    // Turn on the sensor by setting the MOSFET gate HIGH
+  Serial.println("Turning on the sensor...");
+  digitalWrite(sensorPowerPin, HIGH);
+  delay(2000); // Wait for the sensor to power up
+
+  // Clear the serial buffer
+  while (Serial1.available()) {
+    Serial1.read();
+  }
+
+  // Send a trigger pulse
+  Serial1.write(0x55); // Sending any data to trigger the sensor
+
+  // Wait for the response with a timeout mechanism
+  unsigned long responseTimeout = millis() + 100; // 100ms timeout
+  bool sensorDataReceived = false;
+  int distance = -1;
+
+  while (millis() < responseTimeout) {
+    if (Serial1.available()) {
+      // Read the frame header
+      if (Serial1.read() == 0xFF) {
+        // Ensure enough data is available
+        while (Serial1.available() < 3 && millis() < responseTimeout) {
+          // Wait for the remaining data to be available
+        }
+
+        if (Serial1.available() >= 3) {
+          // Read the next three bytes
+          byte Data_H = Serial1.read();
+          byte Data_L = Serial1.read();
+          byte SUM = Serial1.read();
+
+          // Verify checksum
+          byte calculatedSUM = (0xFF + Data_H + Data_L) & 0xFF;
+          if (calculatedSUM == SUM) {
+            // Calculate distance
+            distance = (Data_H << 8) + Data_L;
+            Serial.print("Distance: ");
+            Serial.print(distance);
+            Serial.println(" mm");
+            sensorDataReceived = true;
+          } else {
+            Serial.println("Checksum error");
+          }
+        } else {
+          Serial.println("Timeout waiting for full data packet");
+        }
+        break; // Exit the loop after reading data
+      }
+    }
+  }
+
+  if (!sensorDataReceived) {
+    Serial.println("No sensor data received");
+  }
+
+  // Turn off the sensor to save power
+  Serial.println("Turning off the sensor...");
+  digitalWrite(sensorPowerPin, LOW);
+
+  // Update and print device health status
+  deviceHealth.updateDeviceHealth();
+  deviceHealth.printDeviceHealth();
+
+  // Prepare payload into CayenneLPP format
+  payload[0] = highByte(distance);
+  payload[1] = lowByte(distance);
+  payload[2] = (deviceHealth.battery_status << 2) | deviceHealth.solar_status;
+  payload[3] = highByte(lorawan.packetCount);
+  payload[4] = lowByte(lorawan.packetCount);
+
+
 }
 
 // Function to update the status of the solar panel and battery
