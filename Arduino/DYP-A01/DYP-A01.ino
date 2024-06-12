@@ -13,6 +13,7 @@ V1.5
 #include <ArduinoLowPower.h>
 #include "arduino_secrets.h"
 
+/******** Pin and Variables for Solar Charge Controller **********/
 // Pin definitions for charge controller
 #define PGOOD_PIN 1  // Power Good status pin
 #define CHG_PIN 2    // Charge status pin
@@ -27,6 +28,9 @@ enum BatteryStatus { CHARGING = 0, FULL = 1, DRAINING = 2 };
 // Variables to hold the status of the solar panel and battery
 SolarStatus solar_status = OFF;
 BatteryStatus battery_status = DRAINING;
+
+
+/******** Pin and Variables for Ultrasonic Sensor **********/
 
 const int sensorPowerPin = 4; // Pin to control MOSFET gate
 int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
