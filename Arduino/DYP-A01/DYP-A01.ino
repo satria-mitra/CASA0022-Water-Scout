@@ -1,11 +1,48 @@
+/* 
+*****************************
+Water Height Monitoring
+Sensor : Adafruit DYP-A01
+Developed by : Satria Utama
+Last Update : 12 June 2024
+V1.5
+*****************************
+
+*/
+
 #include <MKRWAN.h>
 #include <ArduinoLowPower.h>
 #include "arduino_secrets.h"
 
+// Pin definitions for charge controller
+#define PGOOD_PIN 1  // Power Good status pin
+#define CHG_PIN 2    // Charge status pin
+
+// Number of samples to take for determining status
+#define CHARGE_SAMPLES 10
+#define SAMPLE_DELAY 100  // Delay between samples in milliseconds
+
+enum SolarStatus { OFF = 0, ACTIVE = 1 };
+enum BatteryStatus { CHARGING = 0, FULL = 1, DRAINING = 2 };
+
+// Variables to hold the status of the solar panel and battery
+SolarStatus solar_status = OFF;
+BatteryStatus battery_status = DRAINING;
+
 const int sensorPowerPin = 4; // Pin to control MOSFET gate
 int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
 
+// Class for Solar Charge Controller
+class DeviceHealth {
+public:
+  SolarStatus solar_status;
+  BatteryStatus battery_status;
+  void updateDeviceHealth();
+  void printDeviceHealth();
+};
+
+// Declare class globally
 LoRaModem modem;
+DeviceHealth deviceHealth;
 
 void setup() {
   //Disable unused peripherals
@@ -125,6 +162,67 @@ void loop() {
   // Put the board to sleep for the defined interval
   //Serial.println("Entering sleep mode...");
   LowPower.deepSleep(interval);
+}
+
+// Function to update the status of the solar panel and battery
+void DeviceHealth::updateDeviceHealth() {
+  int pgood_count = 0;
+  int chg_count = 0;
+
+  // Take multiple samples to determine status
+  for (int i = 0; i < CHARGE_SAMPLES; i++) {
+    pgood_count += digitalRead(PGOOD_PIN) == LOW ? 1 : 0;
+    chg_count += digitalRead(CHG_PIN) == LOW ? 1 : 0;
+    delay(SAMPLE_DELAY);
+  }
+
+  // Determine solar panel status
+  if (pgood_count > CHARGE_SAMPLES / 2) {
+    solar_status = ACTIVE;
+  } else {
+    solar_status = OFF;
+  }
+
+  // Determine battery status
+  if (chg_count > CHARGE_SAMPLES / 2) {
+    if (solar_status == ACTIVE) {
+      battery_status = CHARGING;
+    } else {
+      battery_status = DRAINING;
+    }
+  } else {
+    if (solar_status == ACTIVE) {
+      battery_status = FULL;
+    } else {
+      battery_status = DRAINING;
+    }
+  }
+}
+
+// Function to print the current status of the solar panel and battery
+void DeviceHealth::printDeviceHealth() {
+  // Print solar panel status
+  if (solar_status == ACTIVE) {
+    Serial.println("Solar panel is ACTIVE.");
+  } else {
+    Serial.println("Solar panel is OFF.");
+  }
+
+  // Print battery status
+  switch (battery_status) {
+    case CHARGING:
+      Serial.println("Battery is CHARGING.");
+      break;
+    case FULL:
+      Serial.println("Battery is FULL.");
+      break;
+    case DRAINING:
+      Serial.println("Battery is DRAINING.");
+      break;
+  }
+
+  // Print a blank line for readability
+  Serial.println();
 }
 
 void wakeup() {
