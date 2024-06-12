@@ -80,20 +80,20 @@ public:
 // Declare class globally
 LoRaWAN lorawan;
 
+/******** Class and Function for Power Management **********/
+class PowerManagement {
+public:
+  void enablePowerSavingMode();
+};
+
+// Declare class globally
+PowerManagement powerManagement;
+
 void setup() {
-  // Disable unused peripherals
-  ADC->CTRLA.bit.ENABLE = 0;
-  while (ADC->STATUS.bit.SYNCBUSY);
+  // Enable power-saving mode
+  powerManagement.enablePowerSavingMode();
 
-  DAC->CTRLA.bit.ENABLE = 0;
-  while (DAC->STATUS.bit.SYNCBUSY);
 
-  // SERCOM4->USART.CTRLA.bit.ENABLE = 0;
-  while (SERCOM4->USART.SYNCBUSY.bit.ENABLE);
-
-  // Initialize the sensor power pin
-  pinMode(sensorPowerPin, OUTPUT);
-  digitalWrite(sensorPowerPin, LOW); // Ensure the sensor is off initially
 
   // Start the serial communication with the sensor and the serial monitor
   Serial.begin(9600);   // Serial monitor
@@ -114,7 +114,7 @@ void loop() {
   lorawan.sendData(payload, sizeof(payload));
   // Put the board to sleep for the defined interval
   //Serial.println("Entering sleep mode...");
-  LowPower.sleep(interval);
+  LowPower.deepSleep(interval);
 }
 
 void LoRaWAN::init() {
@@ -196,6 +196,8 @@ void DYP_A01::readSensor() {
   // Turn on the sensor by setting the MOSFET gate HIGH
   Serial.println("Turning on the sensor...");
   digitalWrite(sensorPowerPin, HIGH);
+  digitalWrite(PGOOD_PIN, HIGH); // Turn on PGOOD_PIN
+  digitalWrite(CHG_PIN, HIGH); // Turn on CHG_PIN
   delay(2000); // Wait for the sensor to power up
 
   // Clear the serial buffer
@@ -253,6 +255,8 @@ void DYP_A01::readSensor() {
   // Turn off the sensor to save power
   Serial.println("Turning off the sensor...");
   digitalWrite(sensorPowerPin, LOW);
+  digitalWrite(PGOOD_PIN, LOW); // Turn off PGOOD_PIN
+  digitalWrite(CHG_PIN, LOW); // Turn off CHG_PIN
 
   // Update and print device health status
   deviceHealth.updateDeviceHealth();
@@ -343,4 +347,37 @@ void wakeup() {
   // Serial.begin(9600);   // Serial monitor
   // Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
   //Serial.println("Woke up from sleep");
+}
+
+void PowerManagement::enablePowerSavingMode() {
+  // Set digital pins to input
+  for (int pin = 0; pin < 12; pin++) {
+    pinMode(pin, INPUT);
+    digitalWrite(pin, LOW);
+  }
+
+  // Disable ADC
+  ADC->CTRLA.bit.ENABLE = 0;
+  while (ADC->STATUS.bit.SYNCBUSY);
+
+  // Disable DAC
+  DAC->CTRLA.bit.ENABLE = 0;
+  while (DAC->STATUS.bit.SYNCBUSY);
+
+  // Disable SERCOM4
+  SERCOM4->USART.CTRLA.bit.ENABLE = 0;
+  while (SERCOM4->USART.SYNCBUSY.bit.ENABLE);
+
+  // Initialize the sensor power pin
+  pinMode(sensorPowerPin, OUTPUT);
+  digitalWrite(sensorPowerPin, LOW); // Ensure the sensor is off initially
+
+  // Initialize the charge controller pins
+  pinMode(PGOOD_PIN, OUTPUT);
+  pinMode(CHG_PIN, OUTPUT);
+  digitalWrite(PGOOD_PIN, LOW);
+  digitalWrite(CHG_PIN, LOW);
+
+  USBDevice.detach();
+
 }
