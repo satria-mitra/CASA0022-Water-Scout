@@ -62,7 +62,7 @@ DYP_A01 sensor;
 #define LORA_CONNECTION_STABILIZATION_DELAY_SECONDS 5 // Stabilize LoRa connections
 
 // Payload in CayenneLPP Format
-byte payload[5];
+byte payload[6];
 
 // Class for LoRaWAN Connection
 class LoRaWAN {
@@ -80,11 +80,8 @@ public:
 // Declare class globally
 LoRaWAN lorawan;
 
-
-
-
 void setup() {
-  //Disable unused peripherals
+  // Disable unused peripherals
   ADC->CTRLA.bit.ENABLE = 0;
   while (ADC->STATUS.bit.SYNCBUSY);
 
@@ -105,7 +102,6 @@ void setup() {
 
   // Initialize LoRaWAN Connections
   lorawan.init();
-
 
   // Attach wakeup function to handle wakeup event
   //LowPower.attachInterruptWakeup(RTC_ALARM_WAKEUP, wakeup, CHANGE);
@@ -179,7 +175,7 @@ void LoRaWAN::executeDownlink() {
   } else {
     Serial.println("Invalid command received.");
     return;
-    }
+  }
 }
 
 void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
@@ -197,7 +193,7 @@ void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
 }
 
 void DYP_A01::readSensor() {
-    // Turn on the sensor by setting the MOSFET gate HIGH
+  // Turn on the sensor by setting the MOSFET gate HIGH
   Serial.println("Turning on the sensor...");
   digitalWrite(sensorPowerPin, HIGH);
   delay(2000); // Wait for the sensor to power up
@@ -262,15 +258,13 @@ void DYP_A01::readSensor() {
   deviceHealth.updateDeviceHealth();
   deviceHealth.printDeviceHealth();
 
-  // Prepare payload into CayenneLPP format
-  byte statusByte = (deviceHealth.battery_status << 1) | deviceHealth.solar_status;
-
+  // Construct the status byte into CayenneLPP format
   payload[0] = highByte(distance);
   payload[1] = lowByte(distance);
-  payload[2] = statusByte;
-  payload[3] = highByte(lorawan.packetCount);
-  payload[4] = lowByte(lorawan.packetCount);
-
+  payload[2] = highByte(deviceHealth.battery_status);
+  payload[3] = lowByte(deviceHealth.solar_status);
+  payload[4] = highByte(lorawan.packetCount);
+  payload[5] = lowByte(lorawan.packetCount);
 }
 
 // Function to update the status of the solar panel and battery
@@ -328,14 +322,6 @@ void DeviceHealth::printDeviceHealth() {
   Serial.println();
 }
 
-void wakeup() {
-  // This function will be called when the microcontroller wakes up
-  // Re-enable peripherals if needed
-  // Serial.begin(9600);   // Serial monitor
-  // Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
-  //Serial.println("Woke up from sleep");
-}
-
 // Function to print the payload array in hexadecimal format
 void printPayload(byte* payload, size_t payloadSize) {
   Serial.print("Payload: ");
@@ -349,4 +335,12 @@ void printPayload(byte* payload, size_t payloadSize) {
     }
   }
   Serial.println();
+}
+
+void wakeup() {
+  // This function will be called when the microcontroller wakes up
+  // Re-enable peripherals if needed
+  // Serial.begin(9600);   // Serial monitor
+  // Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
+  //Serial.println("Woke up from sleep");
 }
