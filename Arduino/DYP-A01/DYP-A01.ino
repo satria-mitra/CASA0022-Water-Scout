@@ -8,12 +8,12 @@ int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
 LoRaModem modem;
 
 void setup() {
-  // Disable unused peripherals
-  // ADC->CTRLA.bit.ENABLE = 0;
-  // while (ADC->STATUS.bit.SYNCBUSY);
+  //Disable unused peripherals
+  ADC->CTRLA.bit.ENABLE = 0;
+  while (ADC->STATUS.bit.SYNCBUSY);
 
-  // DAC->CTRLA.bit.ENABLE = 0;
-  // while (DAC->STATUS.bit.SYNCBUSY);
+  DAC->CTRLA.bit.ENABLE = 0;
+  while (DAC->STATUS.bit.SYNCBUSY);
 
   // SERCOM4->USART.CTRLA.bit.ENABLE = 0;
   // while (SERCOM4->USART.SYNCBUSY.bit.ENABLE);
@@ -51,7 +51,7 @@ void setup() {
 
 void loop() {
   // Turn on the sensor by setting the MOSFET gate HIGH
-  Serial.println("Turning on the sensor...");
+  //Serial.println("Turning on the sensor...");
   digitalWrite(sensorPowerPin, HIGH);
   delay(2000); // Wait for the sensor to power up
 
@@ -86,9 +86,9 @@ void loop() {
           if (calculatedSUM == SUM) {
             // Calculate distance
             int distance = (Data_H << 8) + Data_L;
-            Serial.print("Distance: ");
-            Serial.print(distance);
-            Serial.println(" mm");
+            // Serial.print("Distance: ");
+            // Serial.print(distance);
+            // Serial.println(" mm");
 
             // Prepare payload
             String payload = String(distance);
@@ -104,10 +104,10 @@ void loop() {
             }
             sensorDataReceived = true;
           } else {
-            Serial.println("Checksum error");
+            //Serial.println("Checksum error");
           }
         } else {
-          Serial.println("Timeout waiting for full data packet");
+          //Serial.println("Timeout waiting for full data packet");
         }
         break; // Exit the loop after reading data
       }
@@ -119,11 +119,11 @@ void loop() {
   }
 
   // Turn off the sensor to save power
-  Serial.println("Turning off the sensor...");
+  //Serial.println("Turning off the sensor...");
   digitalWrite(sensorPowerPin, LOW);
 
   // Put the board to sleep for the defined interval
-  Serial.println("Entering sleep mode...");
+  //Serial.println("Entering sleep mode...");
   LowPower.deepSleep(interval);
 }
 
