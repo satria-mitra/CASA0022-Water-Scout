@@ -92,7 +92,7 @@ void setup() {
   while (DAC->STATUS.bit.SYNCBUSY);
 
   // SERCOM4->USART.CTRLA.bit.ENABLE = 0;
-  // while (SERCOM4->USART.SYNCBUSY.bit.ENABLE);
+  while (SERCOM4->USART.SYNCBUSY.bit.ENABLE);
 
   // Initialize the sensor power pin
   pinMode(sensorPowerPin, OUTPUT);
@@ -113,10 +113,12 @@ void setup() {
 
 void loop() {
   sensor.readSensor();
+  printPayload(payload, sizeof(payload));
+
   lorawan.sendData(payload, sizeof(payload));
   // Put the board to sleep for the defined interval
   //Serial.println("Entering sleep mode...");
-  LowPower.deepSleep(interval);
+  LowPower.sleep(interval);
 }
 
 void LoRaWAN::init() {
@@ -261,12 +263,13 @@ void DYP_A01::readSensor() {
   deviceHealth.printDeviceHealth();
 
   // Prepare payload into CayenneLPP format
+  byte statusByte = (deviceHealth.battery_status << 1) | deviceHealth.solar_status;
+
   payload[0] = highByte(distance);
   payload[1] = lowByte(distance);
-  payload[2] = (deviceHealth.battery_status << 2) | deviceHealth.solar_status;
+  payload[2] = statusByte;
   payload[3] = highByte(lorawan.packetCount);
   payload[4] = lowByte(lorawan.packetCount);
-
 
 }
 
@@ -291,17 +294,11 @@ void DeviceHealth::updateDeviceHealth() {
 
   // Determine battery status
   if (chg_count > CHARGE_SAMPLES / 2) {
-    if (solar_status == ACTIVE) {
-      battery_status = CHARGING;
-    } else {
-      battery_status = DRAINING;
-    }
+    battery_status = CHARGING;
+  } else if (solar_status == ACTIVE) {
+    battery_status = FULL;
   } else {
-    if (solar_status == ACTIVE) {
-      battery_status = FULL;
-    } else {
-      battery_status = DRAINING;
-    }
+    battery_status = DRAINING;
   }
 }
 
@@ -337,4 +334,19 @@ void wakeup() {
   // Serial.begin(9600);   // Serial monitor
   // Serial1.begin(9600);  // Serial1 for hardware serial communication with the sensor
   //Serial.println("Woke up from sleep");
+}
+
+// Function to print the payload array in hexadecimal format
+void printPayload(byte* payload, size_t payloadSize) {
+  Serial.print("Payload: ");
+  for (size_t i = 0; i < payloadSize; i++) {
+    if (payload[i] < 0x10) {
+      Serial.print("0");
+    }
+    Serial.print(payload[i], HEX);
+    if (i < payloadSize - 1) {
+      Serial.print(" ");
+    }
+  }
+  Serial.println();
 }
