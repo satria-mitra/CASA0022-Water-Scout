@@ -112,6 +112,8 @@ void loop() {
   printPayload(payload, sizeof(payload));
 
   lorawan.sendData(payload, sizeof(payload));
+  lorawan.executeDownlink();
+
   // Put the board to sleep for the defined interval
   //Serial.println("Entering sleep mode...");
   LowPower.deepSleep(interval);
@@ -154,29 +156,24 @@ void LoRaWAN::init() {
 }
 
 void LoRaWAN::executeDownlink() {
-  int receivedData;
+  if (!modem.available()) {
+    Serial.println("No downlink message received at this time.");
+    return;
+  }
+  char rcv[64];
   int i = 0;
   while (modem.available()) {
-    receivedData += (char)modem.read();
-    i++;
+    rcv[i++] = (char)modem.read();
   }
-
-  if (i == 0) {
-    Serial.println("No downlink data received");
-    return;
+  Serial.print("Received: ");
+  for (unsigned int j = 0; j < i; j++) {
+    Serial.print(rcv[j] >> 4, HEX);
+    Serial.print(rcv[j] & 0xF, HEX);
+    Serial.print(" ");
   }
-
-  Serial.println("Received downlink data: " + receivedData);
-
-  // If the received data is the "EXTRA_MEASURE" command, take an extra measurement
-  if (receivedData == 1) {
-    Serial.println("Command 1 received. Executing instant measurement...");
-    //sensor.readSensor();
-  } else {
-    Serial.println("Invalid command received.");
-    return;
-  }
+  Serial.println();
 }
+
 
 void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
   int err;
@@ -190,6 +187,8 @@ void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
   } else {
     Serial.println("Error sending LoRa Packet");
   }
+    delay(1000);
+
 }
 
 void DYP_A01::readSensor() {
@@ -373,8 +372,8 @@ void PowerManagement::enablePowerSavingMode() {
   digitalWrite(sensorPowerPin, LOW); // Ensure the sensor is off initially
 
   // Initialize the charge controller pins
-  pinMode(PGOOD_PIN, OUTPUT);
-  pinMode(CHG_PIN, OUTPUT);
+  // pinMode(PGOOD_PIN, OUTPUT);
+  // pinMode(CHG_PIN, OUTPUT);
   digitalWrite(PGOOD_PIN, LOW);
   digitalWrite(CHG_PIN, LOW);
 
