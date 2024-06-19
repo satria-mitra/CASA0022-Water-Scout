@@ -1,16 +1,17 @@
 /* 
 *****************************
 Water Height Monitoring
-Sensor : Adafruit DYP-A01
+Sensor : Adafruit DYP-A01, Adafruit MAX17048
 Developed by : Satria Utama
-Last Update : 12 June 2024
-V1.5
+Last Update : 18 June 2024
+V1.6
 *****************************
 
 */
 
 #include <MKRWAN.h>
 #include <ArduinoLowPower.h>
+#include <Adafruit_MAX1704X.h>
 #include "arduino_secrets.h"
 
 /******** Pin, Variables and Class for Solar Charge Controller **********/
@@ -34,6 +35,8 @@ class DeviceHealth {
 public:
   SolarStatus solar_status;
   BatteryStatus battery_status;
+  float batteryVoltage;
+  float batteryPercentage;
   void updateDeviceHealth();
   void printDeviceHealth();
 };
@@ -44,7 +47,7 @@ DeviceHealth deviceHealth;
 /******** Pin, Variables and Class for Ultrasonic Sensor **********/
 
 const int sensorPowerPin = 4; // Pin to control MOSFET gate
-int interval = 57000; // Interval to wake up (60000 milliseconds or 60 seconds)
+int interval = 560000; // Interval to wake up (60000 milliseconds or 60 seconds)
 
 class DYP_A01 {
 public:
@@ -62,7 +65,7 @@ DYP_A01 sensor;
 #define LORA_CONNECTION_STABILIZATION_DELAY_SECONDS 5 // Stabilize LoRa connections
 
 // Payload in CayenneLPP Format
-byte payload[6];
+byte payload[10];
 
 // Class for LoRaWAN Connection
 class LoRaWAN {
@@ -89,11 +92,22 @@ public:
 // Declare class globally
 PowerManagement powerManagement;
 
+/******** Class for Battery Monitoring **********/
+class BatteryMonitor {
+public:
+  Adafruit_MAX17048 maxlipo;
+  void begin();
+  void readBattery();
+  void powerOff();
+  void powerOn();
+};
+
+// Declare class globally
+BatteryMonitor batteryMonitor;
+
 void setup() {
   // Enable power-saving mode
   powerManagement.enablePowerSavingMode();
-
-
 
   // Start the serial communication with the sensor and the serial monitor
   Serial.begin(9600);   // Serial monitor
@@ -103,12 +117,19 @@ void setup() {
   // Initialize LoRaWAN Connections
   lorawan.init();
 
+  // Initialize Battery Monitor
+  batteryMonitor.begin();
+
   // Attach wakeup function to handle wakeup event
   //LowPower.attachInterruptWakeup(RTC_ALARM_WAKEUP, wakeup, CHANGE);
 }
 
 void loop() {
   sensor.readSensor();
+  batteryMonitor.powerOn();
+  batteryMonitor.readBattery();
+  batteryMonitor.powerOff();
+  
   printPayload(payload, sizeof(payload));
 
   lorawan.sendData(payload, sizeof(payload));
@@ -174,7 +195,6 @@ void LoRaWAN::executeDownlink() {
   Serial.println();
 }
 
-
 void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
   int err;
   modem.beginPacket();
@@ -187,16 +207,14 @@ void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
   } else {
     Serial.println("Error sending LoRa Packet");
   }
-    delay(1000);
-
+  delay(1000);
 }
 
 void DYP_A01::readSensor() {
   // Turn on the sensor by setting the MOSFET gate HIGH
   Serial.println("Turning on the sensor...");
   digitalWrite(sensorPowerPin, HIGH);
-  digitalWrite(PGOOD_PIN, HIGH); // Turn on PGOOD_PIN
-  digitalWrite(CHG_PIN, HIGH); // Turn on CHG_PIN
+
   delay(2000); // Wait for the sensor to power up
 
   // Clear the serial buffer
@@ -254,20 +272,26 @@ void DYP_A01::readSensor() {
   // Turn off the sensor to save power
   Serial.println("Turning off the sensor...");
   digitalWrite(sensorPowerPin, LOW);
-  digitalWrite(PGOOD_PIN, LOW); // Turn off PGOOD_PIN
-  digitalWrite(CHG_PIN, LOW); // Turn off CHG_PIN
 
   // Update and print device health status
   deviceHealth.updateDeviceHealth();
   deviceHealth.printDeviceHealth();
 
   // Construct the status byte into CayenneLPP format
+  int batteryVoltageMilliVolts = deviceHealth.batteryVoltage * 1000;
+  int batteryPercentageHundredths = deviceHealth.batteryPercentage * 100;
+
   payload[0] = highByte(distance);
   payload[1] = lowByte(distance);
-  payload[2] = highByte(deviceHealth.battery_status);
-  payload[3] = lowByte(deviceHealth.solar_status);
+  payload[2] = deviceHealth.battery_status;
+  payload[3] = deviceHealth.solar_status;
   payload[4] = highByte(lorawan.packetCount);
   payload[5] = lowByte(lorawan.packetCount);
+  payload[6] = highByte(batteryVoltageMilliVolts); // Convert voltage to mV
+  payload[7] = lowByte(batteryVoltageMilliVolts);
+  payload[8] = highByte(batteryPercentageHundredths); // Convert percentage to 0.01%
+  payload[9] = lowByte(batteryPercentageHundredths);
+
 }
 
 // Function to update the status of the solar panel and battery
@@ -297,6 +321,10 @@ void DeviceHealth::updateDeviceHealth() {
   } else {
     battery_status = DRAINING;
   }
+
+  // Read battery voltage and percentage from MAX17048
+  batteryVoltage = batteryMonitor.maxlipo.cellVoltage();
+  batteryPercentage = batteryMonitor.maxlipo.cellPercent();
 }
 
 // Function to print the current status of the solar panel and battery
@@ -320,6 +348,15 @@ void DeviceHealth::printDeviceHealth() {
       Serial.println("Battery is DRAINING.");
       break;
   }
+
+  // Print battery voltage and percentage
+  Serial.print("Battery Voltage: ");
+  Serial.print(batteryVoltage);
+  Serial.println(" V");
+
+  Serial.print("Battery Percentage: ");
+  Serial.print(batteryPercentage);
+  Serial.println(" %");
 
   // Print a blank line for readability
   Serial.println();
@@ -378,5 +415,42 @@ void PowerManagement::enablePowerSavingMode() {
   digitalWrite(CHG_PIN, LOW);
 
   USBDevice.detach();
+}
 
+void BatteryMonitor::begin() {
+  pinMode(11, OUTPUT);
+  pinMode(12, OUTPUT);
+  digitalWrite(11, LOW);
+  digitalWrite(12, LOW);
+
+  if (!maxlipo.begin()) {
+    Serial.println(F("Could not find Adafruit MAX17048. Please check wiring!"));
+    while (1) delay(10);
+  }
+  Serial.print(F("Found MAX17048 with Chip ID: 0x")); 
+  Serial.println(maxlipo.getChipID(), HEX);
+}
+
+void BatteryMonitor::readBattery() {
+  float voltage = maxlipo.cellVoltage();
+  float percentage = maxlipo.cellPercent();
+
+  if (isnan(voltage) || isnan(percentage)) {
+    Serial.println("Failed to read from MAX17048, check the battery connection!");
+  } else {
+    deviceHealth.batteryVoltage = voltage;
+    deviceHealth.batteryPercentage = percentage;
+  }
+}
+
+void BatteryMonitor::powerOff() {
+  digitalWrite(11, LOW);
+  digitalWrite(12, LOW);
+  Serial.println("Battery monitor powered off.");
+}
+
+void BatteryMonitor::powerOn() {
+  digitalWrite(11, HIGH);
+  digitalWrite(12, HIGH);
+  Serial.println("Battery monitor powered on.");
 }
