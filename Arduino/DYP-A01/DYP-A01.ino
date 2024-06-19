@@ -47,7 +47,7 @@ DeviceHealth deviceHealth;
 /******** Pin, Variables and Class for Ultrasonic Sensor **********/
 
 const int sensorPowerPin = 4; // Pin to control MOSFET gate
-int interval = 560000; // Interval to wake up (60000 milliseconds or 60 seconds)
+int interval = 55500; //595000; // Interval to wake up (60000 milliseconds or 60 seconds)
 
 class DYP_A01 {
 public:
@@ -186,6 +186,9 @@ void LoRaWAN::executeDownlink() {
   while (modem.available()) {
     rcv[i++] = (char)modem.read();
   }
+
+  rcv[i] = '\0'; // Null-terminate the string
+
   Serial.print("Received: ");
   for (unsigned int j = 0; j < i; j++) {
     Serial.print(rcv[j] >> 4, HEX);
@@ -193,6 +196,25 @@ void LoRaWAN::executeDownlink() {
     Serial.print(" ");
   }
   Serial.println();
+
+  // Check if the received command is "1"
+  if (rcv[0] == 0x01) {
+    Serial.println("Received reset command, sending reset payload and resetting the board.");
+    
+    // Prepare reset payload
+    byte resetPayload[4] = { 'R', 'E', 'S', 'T' };
+
+    // Send reset payload
+    sendData(resetPayload, sizeof(resetPayload));
+
+    // Delay to ensure the payload is sent
+    delay(1000);
+
+    // Reset the board
+    NVIC_SystemReset();
+  } else {
+      Serial.println("No valid reset command received.");
+    }
 }
 
 void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
@@ -306,6 +328,12 @@ void DeviceHealth::updateDeviceHealth() {
     delay(SAMPLE_DELAY);
   }
 
+  // Debugging counts
+  Serial.print("PGOOD count: ");
+  Serial.println(pgood_count);
+  Serial.print("CHG count: ");
+  Serial.println(chg_count);
+
   // Determine solar panel status
   if (pgood_count > CHARGE_SAMPLES / 2) {
     solar_status = ACTIVE;
@@ -315,7 +343,11 @@ void DeviceHealth::updateDeviceHealth() {
 
   // Determine battery status
   if (chg_count > CHARGE_SAMPLES / 2) {
-    battery_status = CHARGING;
+    if (solar_status == ACTIVE) {
+      battery_status = CHARGING;
+    } else {
+      battery_status = DRAINING; // Update to ensure consistency
+    }
   } else if (solar_status == ACTIVE) {
     battery_status = FULL;
   } else {
@@ -453,4 +485,5 @@ void BatteryMonitor::powerOn() {
   digitalWrite(11, HIGH);
   digitalWrite(12, HIGH);
   Serial.println("Battery monitor powered on.");
+  delay(500);
 }
