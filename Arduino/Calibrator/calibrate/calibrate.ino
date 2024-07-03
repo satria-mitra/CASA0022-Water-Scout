@@ -18,8 +18,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 const unsigned long sensorInterval = 5000; // 10 seconds
 unsigned long previousMillis = 0;
 
-// Global variable to store distance
+// Global variables to store distance and data count
 int distance = -1;
+int dataCount = 0;
 
 // Function to initialize OLED display
 void setupOLED() {
@@ -56,7 +57,7 @@ void writeDataToSD(String dataString) {
 
 // Ultrasonic sensor read function
 void readSensor() {
-  ///delay(500); // Wait for the sensor to power up
+  delay(500); // Wait for the sensor to power up
 
   // Clear the serial buffer
   while (Serial1.available()) {
@@ -137,7 +138,8 @@ void loop() {
     readSensor();
 
     if (distance != -1) { // Check if valid distance is read
-      String dataString = "Distance=" + String(distance) + " mm";
+      dataCount++; // Increment data count
+      String dataString = String(dataCount) + ". Distance=" + String(distance) + " mm";
       printDataToOLED(dataString);
       writeDataToSD(dataString);
     }
