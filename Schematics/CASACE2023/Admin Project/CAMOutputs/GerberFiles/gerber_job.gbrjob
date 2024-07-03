@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2024-07-03T08:04:21Z",
+        "GenerationSoftware": {
+            "Application": "Fusion Electronics",
+            "Vendor": "Autodesk",
+            "Version": "9.7.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.57,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "water_height_monitoring_system v12"
+        },
+        "Owner": "Satria Utama <satria.utama.23@ucl.ac.uk>",
+        "Size": {
+            "X": 66,
+            "Y": 66
+        }
+    }
+}
