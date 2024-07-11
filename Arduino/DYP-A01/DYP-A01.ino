@@ -3,8 +3,8 @@
 Water Height Monitoring
 Sensor : Adafruit DYP-A01, Adafruit MAX17048
 Developed by : Satria Utama
-Last Update : 18 June 2024
-V1.6
+Last Update : 10 July 2024
+V1.8
 *****************************
 
 */
@@ -120,9 +120,14 @@ void setup() {
   // Initialize Battery Monitor
   batteryMonitor.begin();
 
+  // Set pin modes for charge controller with pull-up resistors
+  // pinMode(PGOOD_PIN, INPUT_PULLUP);
+  // pinMode(CHG_PIN, INPUT_PULLUP);
+
   // Attach wakeup function to handle wakeup event
   //LowPower.attachInterruptWakeup(RTC_ALARM_WAKEUP, wakeup, CHANGE);
 }
+
 
 void loop() {
   sensor.readSensor();
@@ -136,7 +141,6 @@ void loop() {
   lorawan.executeDownlink();
 
   // Put the board to sleep for the defined interval
-  //Serial.println("Entering sleep mode...");
   LowPower.deepSleep(interval);
 }
 
@@ -313,8 +317,8 @@ void DYP_A01::readSensor() {
   payload[7] = lowByte(batteryVoltageMilliVolts);
   payload[8] = highByte(batteryPercentageHundredths); // Convert percentage to 0.01%
   payload[9] = lowByte(batteryPercentageHundredths);
-
 }
+
 
 // Function to update the status of the solar panel and battery
 void DeviceHealth::updateDeviceHealth() {
@@ -323,8 +327,21 @@ void DeviceHealth::updateDeviceHealth() {
 
   // Take multiple samples to determine status
   for (int i = 0; i < CHARGE_SAMPLES; i++) {
-    pgood_count += digitalRead(PGOOD_PIN) == LOW ? 1 : 0;
-    chg_count += digitalRead(CHG_PIN) == LOW ? 1 : 0;
+    int pgood_value = digitalRead(PGOOD_PIN);
+    int chg_value = digitalRead(CHG_PIN);
+    
+    // Debug prints for pin values
+    Serial.print("Sample ");
+    Serial.print(i);
+    Serial.print(" - PGOOD_PIN value: ");
+    Serial.println(pgood_value);
+    Serial.print("Sample ");
+    Serial.print(i);
+    Serial.print(" - CHG_PIN value: ");
+    Serial.println(chg_value);
+
+    pgood_count += (pgood_value == LOW) ? 1 : 0;
+    chg_count += (chg_value == LOW) ? 1 : 0;
     delay(SAMPLE_DELAY);
   }
 
@@ -334,30 +351,48 @@ void DeviceHealth::updateDeviceHealth() {
   Serial.print("CHG count: ");
   Serial.println(chg_count);
 
-  // Determine solar panel status
-  if (pgood_count > CHARGE_SAMPLES / 2) {
-    solar_status = ACTIVE;
-  } else {
-    solar_status = OFF;
-  }
-
   // Determine battery status
   if (chg_count > CHARGE_SAMPLES / 2) {
-    if (solar_status == ACTIVE) {
-      battery_status = CHARGING;
-    } else {
-      battery_status = DRAINING; // Update to ensure consistency
-    }
-  } else if (solar_status == ACTIVE) {
-    battery_status = FULL;
+    battery_status = CHARGING;
+    solar_status = ACTIVE;  // Consider solar panel active if charging
+  } else if (pgood_count > CHARGE_SAMPLES / 2) {
+    solar_status = ACTIVE;
+    battery_status = FULL;  // Assume battery is full if not charging but solar is active
   } else {
+    solar_status = OFF;
     battery_status = DRAINING;
   }
 
   // Read battery voltage and percentage from MAX17048
   batteryVoltage = batteryMonitor.maxlipo.cellVoltage();
   batteryPercentage = batteryMonitor.maxlipo.cellPercent();
+
+  // Debug output for final status
+  Serial.println(solar_status == ACTIVE ? "Solar panel is ACTIVE." : "Solar panel is OFF.");
+  switch (battery_status) {
+    case CHARGING:
+      Serial.println("Battery is CHARGING.");
+      break;
+    case FULL:
+      Serial.println("Battery is FULL.");
+      break;
+    case DRAINING:
+      Serial.println("Battery is DRAINING.");
+      break;
+  }
+  Serial.print("Battery Voltage: ");
+  Serial.print(batteryVoltage);
+  Serial.println(" V");
+  Serial.print("Battery Percentage: ");
+  Serial.print(batteryPercentage);
+  Serial.println(" %");
+  Serial.println();
 }
+
+
+
+
+
 
 // Function to print the current status of the solar panel and battery
 void DeviceHealth::printDeviceHealth() {
