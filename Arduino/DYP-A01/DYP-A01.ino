@@ -47,7 +47,7 @@ DeviceHealth deviceHealth;
 /******** Pin, Variables and Class for Ultrasonic Sensor **********/
 
 const int sensorPowerPin = 4; // Pin to control MOSFET gate
-int interval = 55500; //595000; // Interval to wake up (60000 milliseconds or 60 seconds)
+int interval = 55500; //595000;  //; // Interval to wake up (60000 milliseconds or 60 seconds)
 
 class DYP_A01 {
 public:
@@ -118,7 +118,7 @@ void setup() {
   lorawan.init();
 
   // Initialize Battery Monitor
-  batteryMonitor.begin();
+  //batteryMonitor.begin();
 
   // Set pin modes for charge controller with pull-up resistors
   // pinMode(PGOOD_PIN, INPUT_PULLUP);
@@ -131,9 +131,9 @@ void setup() {
 
 void loop() {
   sensor.readSensor();
-  batteryMonitor.powerOn();
-  batteryMonitor.readBattery();
-  batteryMonitor.powerOff();
+  //batteryMonitor.powerOn();
+  //batteryMonitor.readBattery();
+  //batteryMonitor.powerOff();
   
   printPayload(payload, sizeof(payload));
 
@@ -239,7 +239,7 @@ void LoRaWAN::sendData(byte* payload, size_t payloadSize) {
 void DYP_A01::readSensor() {
   // Turn on the sensor by setting the MOSFET gate HIGH
   Serial.println("Turning on the sensor...");
-  digitalWrite(sensorPowerPin, HIGH);
+  //digitalWrite(sensorPowerPin, HIGH);
 
   delay(2000); // Wait for the sensor to power up
 
@@ -481,7 +481,7 @@ void PowerManagement::enablePowerSavingMode() {
   digitalWrite(PGOOD_PIN, LOW);
   digitalWrite(CHG_PIN, LOW);
 
-  USBDevice.detach();
+  //USBDevice.detach();
 }
 
 void BatteryMonitor::begin() {
@@ -520,5 +520,4 @@ void BatteryMonitor::powerOn() {
   digitalWrite(11, HIGH);
   digitalWrite(12, HIGH);
   Serial.println("Battery monitor powered on.");
-  delay(500);
-}
+  delay(500);}
