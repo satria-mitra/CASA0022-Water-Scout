@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>My A-Frame Scene with Water Gauge and D3.js Chart</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+  <script src="https://unpkg.com/aframe-orbit-controls@1.3.2/dist/aframe-orbit-controls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+
+<body>
+  <a-scene>
+    <!-- Load the housemill model with the custom-water component -->
+    <a-entity 
+      id="housemill"
+      gltf-model="./ssrc/models/housemill_test.gltf" 
+      position="0 0 0" 
+      scale="3 3 3"
+      replace-planes-with-water>
+    </a-entity>
+    
+    <a-entity 
+      id="water-gauge"
+      gltf-model="./src/models/water_gauge.gltf" 
+      position="-18 -3.1 -12" 
+      scale="100 100 100">
+    </a-entity>
+    
+    <!-- Add the plane for the chart -->
+    <a-plane id="chart-plane" position="-25 7 -6" width="9" height="7" color="#FFF" rotation="0 180 0"></a-plane>
+
+    <!-- Sky and Camera with orbit controls -->
+    <a-sky color="lightblue"></a-sky>
+
+    <a-entity 
+      camera 
+      look-controls="enabled: false" 
+      orbit-controls="target:-10 10 15; minDistance: 2; maxDistance: 180; initialPosition: 5 20 -35; rotateSpeed: 0.5">
+    </a-entity>
+  </a-scene>
+
+  <!-- Hidden Canvas Element for D3.js Chart -->
+  <canvas id="chartCanvas" width="1024" height="512" style="display:none;"></canvas>
+
+  <script>
+    const waterNormalsPath = './src/textures/waternormals.jpg';
+
+    AFRAME.registerComponent('replace-planes-with-water', {
+      init: async function () {
+        const scene = this.el.sceneEl.object3D;
+
+        console.log("Initializing water component");
+
+        // Fetch the latest water height from the server
+        const waterHeightData = await fetch('/latest-water-height').then(res => res.json());
+        console.log('Latest Water Height Data:', waterHeightData);
+
+        // Extract the _value which represents the water height
+        console.log(waterHeightData._value);
+        const waterHeightValue = waterHeightData._value * -1 + 4500;
+        console.log(waterHeightValue);
+
+        // Define water plane dimensions and position
+        const waterPlaneWidth = 63; 
+        const waterPlaneLength = 28; 
+
+        // Map the water height to the y-position
+        const yPosition = 0.001 * waterHeightValue - 3.3;
+
+        const waterPlanePosition = new THREE.Vector3(7, yPosition, -13);
+
+        // Create the water plane
+        const waterObjects = await ReplacePlanesWithWater(scene, waterPlaneWidth, waterPlaneLength, waterPlanePosition);
+
+        console.log("Water objects created:", waterObjects);
+
+        // Animate the water
+        this.el.sceneEl.addEventListener('renderstart', function () {
+          console.log("Render start event detected");
+          scene.onBeforeRender = () => {
+            waterObjects.forEach(animateWater);
+          };
+        });
+
+        // Fetch and render D3.js chart with real data
+        fetchAndRenderChart();
+      }
+    });
+
+    async function fetchAndRenderChart() {
+      // Fetch data from the server for the last 2 days
+      const chartData = await fetch('/water-height-last-2-days').then(res => res.json());
+
+      // Format data for D3.js
+      const data = chartData.map(d => ({
+        label: new Date(d._time),
+        value: d._value * -1 + 4500,
+      }));
+
+      // Log data for debugging
+      console.log('Chart Data:', data);
+
+      renderD3Chart(data);
+    }
+
+    function renderD3Chart(data) {
+      // Get the canvas context
+      const canvas = document.getElementById('chartCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Set the background color to white
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw the title
+      ctx.fillStyle = 'black';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Water Height Dashboard', canvas.width / 2, 40);
+      
+      // D3.js scales for X and Y axes
+      const margin = { top: 50, right: 30, bottom: 50, left: 50 };
+      const width = canvas.width - margin.left - margin.right;
+      const height = canvas.height - margin.top - margin.bottom;
+      
+      const x = d3.scaleTime()
+                  .domain(d3.extent(data, d => d.label))
+                  .range([margin.left, width + margin.left]);
+      
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])
+                  .range([height, margin.top]);
+    
+      // Define the threshold value
+      const thresholdValue = 1500; // Set your desired threshold value here
+      
+      // Draw the threshold line
+      const thresholdY = y(thresholdValue);
+      ctx.strokeStyle = 'red'; // Set color for the threshold line
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(margin.left, thresholdY);
+      ctx.lineTo(width + margin.left, thresholdY);
+      ctx.stroke();
+      
+      // Draw the threshold label
+      ctx.fillStyle = 'red';
+      ctx.font = '14px Arial';
+      ctx.fillText(`Threshold: ${thresholdValue}`, margin.left + 10, thresholdY - 10);
+      
+      // Draw the line
+      ctx.strokeStyle = 'steelblue';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      data.forEach((d, i) => {
+        const xPos = x(d.label);
+        const yPos = y(d.value);
+        if (i === 0) {
+          ctx.moveTo(xPos, yPos);
+        } else {
+          ctx.lineTo(xPos, yPos);
+        }
+        ctx.fillStyle = 'black';
+        ctx.font = '12px Arial';  // Set font size for the value labels
+        ctx.textAlign = 'center';
+        ctx.fillText(d.value.toFixed(2), xPos, yPos - 10);  // Display the value above each point
+      });
+      ctx.stroke();
+      
+      // Draw X axis
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = 'black';
+      ctx.beginPath();
+      
+      const tickInterval = d3.timeHour.every(1); // Custom tick interval, e.g., every 1 hour
+      x.ticks(tickInterval).forEach((tick, i) => {
+        const xPos = x(tick);
+      
+        // Draw tick marks
+        ctx.moveTo(xPos, height);
+        ctx.lineTo(xPos, height + 5);
+      
+        // Rotate and draw the X-axis labels vertically with time and date
+        ctx.save();
+        ctx.translate(xPos, height + 25);  // Adjust position as needed
+        ctx.rotate(-Math.PI / 4);  // Rotate text 45 degrees to make it slanted
+      
+        // Set smaller font size
+        ctx.font = '12px Arial';  // Adjust font size (e.g., 12px) as needed
+      
+        ctx.textAlign = 'right';  // Adjust alignment for better positioning
+        ctx.fillText(d3.timeFormat("%b %d %H:%M")(tick), 0, 0);
+        ctx.restore();
+      });
+      ctx.stroke();
+      
+      // Draw Y axis
+      ctx.beginPath();
+      y.ticks().forEach(tick => {
+        const yPos = y(tick);
+        ctx.moveTo(margin.left - 5, yPos);
+        ctx.lineTo(margin.left, yPos);
+        ctx.fillText(tick, margin.left - 10, yPos + 5);
+      });
+      ctx.stroke();
+      
+      // Convert the D3 chart into a texture and apply it to the plane
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+      
+      const plane = document.getElementById('chart-plane');
+      plane.setAttribute('material', 'src', texture);
+    }
+    
+
+    async function ReplacePlanesWithWater(scene, width, length, position) {
+      const waterObjects = [];
+
+      // Manually define the size and position of the water plane
+      const water = await createManualWaterPlane(width, length, position, scene);
+      waterObjects.push(water);
+      scene.add(water);
+
+      console.log("Water plane added to scene:", water);
+
+      return waterObjects;
+    }
+
+    async function createManualWaterPlane(width, length, position, scene) {
+      return new Promise((resolve) => {
+        const waterGeometry = new THREE.PlaneGeometry(width, length);
+
+        console.log("Loading water texture from:", waterNormalsPath);
+
+        new THREE.TextureLoader().load(waterNormalsPath, (texture) => {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+          console.log("Texture loaded:", texture);
+
+          const waterOptions = {
+            textureWidth: 512,
+            textureHeight: 512,
+            waterNormals: texture,
+            sunDirection: new THREE.Vector3(),
+            sunColor: 0xffffff,
+            waterColor: 0x00faff,
+            distortionScale: 3.7,
+            fog: scene.fog !== undefined,
+          };
+
+          const water = new THREE.Water(waterGeometry, waterOptions);
+
+          water.rotation.x = -Math.PI / 2;
+          water.position.copy(position);
+
+          console.log("Water object created:", water);
+
+          resolve(water);
+        });
+      });
+    }
+
+    function animateWater(water) {
+      console.log("Animating water object:", water);
+
+      if (water && water.material && water.material.uniforms && water.material.uniforms['time']) {
+        water.material.uniforms['time'].value += 1.0 / 100.0;
+        console.log("Water time uniform updated:", water.material.uniforms['time'].value);
+      } else {
+        console.warn('Water uniforms not set properly:', water.material.uniforms);
+      }
+    }
+  </script>
+</body>
+</html>
