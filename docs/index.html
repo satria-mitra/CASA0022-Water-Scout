@@ -1,19 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>My A-Frame Scene with Water Gauge and D3.js Chart</title>
+  <title>My A-Frame AR/WebXR Scene</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
   <script src="https://unpkg.com/aframe-orbit-controls@1.3.2/dist/aframe-orbit-controls.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://aframe.io/releases/1.0.4/aframe-ar.js"></script>
 </head>
 
-<body>
-  <a-scene>
+<body style="margin: 0; overflow: hidden;">
+  <div id="viewToggle" style="position: absolute; top: 10px; left: 10px; z-index: 10;">
+    <button id="webxrButton">WebXR Mode</button>
+    <button id="arButton">AR Mode</button>
+  </div>
+
+  <a-scene embedded id="scene" arjs="sourceType: webcam; debugUIEnabled: false;" style="display: none;">
+    <!-- AR Mode: Hiro Marker -->
+    <a-marker preset="hiro" id="hiroMarker">
+      <!-- Load the housemill model with the custom-water component -->
+      <a-entity 
+        id="housemill-ar"
+        gltf-model="src/models/housemill_test.gltf" 
+        position="0 0 0" 
+        scale="3 3 3"
+        replace-planes-with-water>
+      </a-entity>
+      
+      <a-entity 
+        id="water-gauge-ar"
+        gltf-model="./src/models/water_gauge.gltf" 
+        position="-18 -3.1 -12" 
+        scale="100 100 100">
+      </a-entity>
+      
+      <!-- Add the plane for the chart -->
+      <a-plane id="chart-plane-ar" position="-25 7 -6" width="9" height="7" color="#FFF" rotation="0 180 0"></a-plane>
+    </a-marker>
+
+    <!-- AR.js Camera -->
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <a-scene embedded id="webxrScene">
+    <!-- WebXR Mode: Regular Scene with Orbit Controls -->
     <!-- Load the housemill model with the custom-water component -->
     <a-entity 
-      id="housemill"
+      id="housemill-xr"
       gltf-model="src/models/housemill_test.gltf" 
       position="0 0 0" 
       scale="3 3 3"
@@ -21,14 +55,14 @@
     </a-entity>
     
     <a-entity 
-      id="water-gauge"
+      id="water-gauge-xr"
       gltf-model="./src/models/water_gauge.gltf" 
       position="-18 -3.1 -12" 
       scale="100 100 100">
     </a-entity>
     
     <!-- Add the plane for the chart -->
-    <a-plane id="chart-plane" position="-25 7 -6" width="9" height="7" color="#FFF" rotation="0 180 0"></a-plane>
+    <a-plane id="chart-plane-xr" position="-25 7 -6" width="9" height="7" color="#FFF" rotation="0 180 0"></a-plane>
 
     <!-- Sky and Camera with orbit controls -->
     <a-sky color="lightblue"></a-sky>
@@ -46,6 +80,7 @@
   <script>
     const waterNormalsPath = './src/textures/waternormals.jpg';
 
+    // Component to replace planes with water
     AFRAME.registerComponent('replace-planes-with-water', {
       init: async function () {
         const scene = this.el.sceneEl.object3D;
@@ -209,8 +244,9 @@
       const texture = new THREE.CanvasTexture(canvas);
       texture.needsUpdate = true;
       
-      const plane = document.getElementById('chart-plane');
-      plane.setAttribute('material', 'src', texture);
+      // Apply texture to both planes in AR and WebXR mode
+      document.getElementById('chart-plane-ar').setAttribute('material', 'src', texture);
+      document.getElementById('chart-plane-xr').setAttribute('material', 'src', texture);
     }
     
 
@@ -271,6 +307,25 @@
         console.warn('Water uniforms not set properly:', water.material.uniforms);
       }
     }
+
+    // View toggle functionality
+    const webxrButton = document.getElementById('webxrButton');
+    const arButton = document.getElementById('arButton');
+    const webxrScene = document.getElementById('webxrScene');
+    const arScene = document.getElementById('scene');
+
+    webxrButton.addEventListener('click', () => {
+      arScene.style.display = 'none';
+      webxrScene.style.display = 'block';
+    });
+
+    arButton.addEventListener('click', () => {
+      webxrScene.style.display = 'none';
+      arScene.style.display = 'block';
+    });
+
+    // Initialize in WebXR mode by default
+    webxrScene.style.display = 'block';
   </script>
 </body>
 </html>
