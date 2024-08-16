@@ -1,4 +1,7 @@
   // server.js
+  require('dotenv').config();
+
+  
   const express = require('express');
   const { InfluxDB } = require('@influxdata/influxdb-client');
 
