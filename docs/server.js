@@ -18,13 +18,8 @@ const queryApi = new InfluxDB({ url, token }).getQueryApi(org);
 app.use(cors());
 
 // Serve static files from the "public" directory
-app.use(express.static('public'));
-
-// Serve models from the "src/models" directory
-app.use('/src/models', express.static('src/models'));
-
-// Serve textures from the "src/textures" directory
-app.use('/src/textures', express.static('src/textures'));
+app.use('/models', express.static('public/src/models'));
+app.use('/textures', express.static('public/src/textures'));
 
 // Define routes for your APIs
 app.get('/latest-water-height', async (req, res) => {
