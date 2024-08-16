@@ -1,86 +1,34 @@
 const express = require('express');
-const { InfluxDB } = require('@influxdata/influxdb-client');
-const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+const { fetchLatestWaterHeight, fetchWaterHeightLast2Days } = require('./influxdbClient');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-// InfluxDB connection details using environment variables
-const url = process.env.INFLUXDB_URL;
-const token = process.env.INFLUXDB_TOKEN;
-const org = process.env.INFLUXDB_ORG;
-const bucket = process.env.INFLUXDB_BUCKET;
+app.use(express.static(path.join(__dirname, 'public')));
 
-const queryApi = new InfluxDB({ url, token }).getQueryApi(org);
-
-// Enable CORS for all routes
-app.use(cors());
-
-// Serve static files from the "public" directory
-app.use('/models', express.static('public/src/models'));
-app.use('/textures', express.static('public/src/textures'));
-
-// Define routes for your APIs
 app.get('/latest-water-height', async (req, res) => {
+  try {
     const data = await fetchLatestWaterHeight();
-    res.json(data);
+    res.json({ _value: data });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to fetch latest water height' });
+  }
 });
 
 app.get('/water-height-last-2-days', async (req, res) => {
+  try {
     const data = await fetchWaterHeightLast2Days();
     res.json(data);
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to fetch water height data for last 2 days' });
+  }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).send('Something went wrong!');
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start the server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
-
-async function fetchLatestWaterHeight() {
-    const query = `
-        from(bucket: "${bucket}")
-            |> range(start: -24h)
-            |> filter(fn: (r) => r["_measurement"] == "water-level")
-            |> filter(fn: (r) => r["_field"] == "distance")
-            |> last()`;
-
-    let result = null;
-
-    try {
-        const rows = await queryApi.collectRows(query);
-        if (rows.length > 0) {
-            result = rows[0];
-        }
-    } catch (error) {
-        console.error('Error fetching data from InfluxDB:', error);
-    }
-
-    return result;
-}
-
-async function fetchWaterHeightLast2Days() {
-    const query = `
-        from(bucket: "${bucket}")
-            |> range(start: -2d)
-            |> filter(fn: (r) => r["_measurement"] == "water-level")
-            |> filter(fn: (r) => r["_field"] == "distance")
-            |> aggregateWindow(every: 1h, fn: mean)
-            |> yield(name: "mean")`;
-
-    let results = [];
-
-    try {
-        results = await queryApi.collectRows(query);
-    } catch (error) {
-        console.error('Error fetching data from InfluxDB:', error);
-    }
-
-    return results;
-}

@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { fetchLatestWaterHeight } = require('./influxdb');
+const { fetchLatestWaterHeight } = require('./influxdbClient');
 
 const app = express();
 const port = 3000;
