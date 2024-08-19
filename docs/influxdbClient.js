@@ -91,9 +91,34 @@ async function fetchWaterHeightLast2Days() {
   });
 }
 
+async function fetchLatestData() {
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -24h)
+      |> filter(fn: (r) => r["_measurement"] == "water-level")
+      |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "solar_status" or r["_field"] == "snr" or r["_field"] == "rssi")
+      |> last()`;
+
+  let result = {};
+
+  try {
+    const rows = await queryApi.collectRows(query);
+    if (rows.length > 0) {
+      rows.forEach(row => {
+        result[row._field] = row._value;
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching data from InfluxDB:', error);
+  }
+
+  return result;
+}
+
 
 module.exports = {
   fetchLatestWaterHeight,
   fetchWaterHeightLast2Days,
-  fetchLatestBatteryData
+  fetchLatestBatteryData,
+  fetchLatestData
 };

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>My A-Frame Scene with Water Gauge and D3.js Chart</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
+  <script src="https://unpkg.com/aframe-orbit-controls@1.3.2/dist/aframe-orbit-controls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+
+<body>
+  <a-scene>
+    <a-entity 
+      id="housemill"
+      gltf-model="./src/models/HouseMillLowpoly.gltf" 
+      position="0 0 0" 
+      scale="3 3 3"
+      replace-planes-with-water>
+    </a-entity>
+
+    <a-entity 
+      id="water-gauge"
+      gltf-model="./src/models/water_gauge.gltf" 
+      position="-18 -3.1 -12" 
+      scale="100 100 100">
+    </a-entity>
+    
+    <a-plane id="device-plane" position="-9 15 -3" width="12" height="10" color="#FFF" rotation="320 185 0"></a-plane>
+    <a-plane id="chart-plane" position="-24 15 -2" width="15" height="10" color="#FFF" rotation="320 185 0"></a-plane>
+
+    <a-sky color="lightblue"></a-sky>
+
+    <a-entity 
+      camera 
+      look-controls="enabled: false" 
+      orbit-controls="target:-10 10 15; minDistance: 2; maxDistance: 180; initialPosition: 5 20 -35; rotateSpeed: 0.5">
+    </a-entity>
+  </a-scene>
+
+  <canvas id="chartCanvas" width="1024" height="512" style="display:none;"></canvas>
+  <script>
+    const waterNormalsPath = './src/textures/waternormals.jpg';
+
+    AFRAME.registerComponent('replace-planes-with-water', {
+      init: async function () {
+        const scene = this.el.sceneEl.object3D;
+
+        console.log("Initializing water component");
+
+        const waterHeightData = await fetch('/latest-water-height').then(res => res.json());
+        const waterHeightValue = waterHeightData._value * -1 + 4500;
+
+        const waterPlaneWidth = 63; 
+        const waterPlaneLength = 28; 
+        const yPosition = 0.001 * waterHeightValue - 3.3;
+        const waterPlanePosition = new THREE.Vector3(7, yPosition, -13);
+
+        const waterObjects = await ReplacePlanesWithWater(scene, waterPlaneWidth, waterPlaneLength, waterPlanePosition);
+
+        console.log("Water objects created:", waterObjects);
+
+        this.el.sceneEl.addEventListener('renderstart', function () {
+          scene.onBeforeRender = () => {
+            waterObjects.forEach(animateWater);
+          };
+        });
+
+        fetchAndRenderChart();
+        fetchAndRenderBatteryData();  
+      }
+    });
+
+    async function fetchAndRenderBatteryData() {
+      const batteryData = await fetch('/latest-battery-data').then(res => res.json());
+
+      console.log('Live Device Data:', batteryData._value);
+
+      renderBatteryData(batteryData._value);
+    }
+    function renderBatteryData(data) {
+      const canvas = document.getElementById('chartCanvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Clear the canvas before drawing
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw the title
+      ctx.fillStyle = 'black';
+      ctx.font = '50px Arial'; // Increased font size
+      ctx.textAlign = 'center';
+      ctx.fillText('Live Device Data', canvas.width / 2, 60); // Moved down slightly
+      
+      // Define text positions with larger margin and increased font size
+      const textX = 100; // Added left margin
+      let textY = 150; // Adjusted starting Y position
+      const lineHeight = 50; // Increased line height
+    
+      // Define units for specific fields
+      const units = {
+        battery_voltage: 'V',
+        battery_percentage: '%',
+        distance: 'mm'
+      };
+    
+      // Iterate over battery data fields
+      Object.keys(data).forEach(key => {
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'black';
+        ctx.font = '36px Arial'; // Larger font size for the data
+        
+        // Append unit if available, otherwise just print the value
+        const valueWithUnit = `${data[key]}${units[key] ? ` ${units[key]}` : ''}`;
+        ctx.fillText(`${key}: ${valueWithUnit}`, textX, textY);
+        textY += lineHeight;
+      });
+      
+      // Convert the D3 chart into a texture and apply it to the plane
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+    
+      const devicePlane = document.getElementById('device-plane');
+      devicePlane.setAttribute('material', 'src', texture);
+    }
+    
+    
+
+    async function fetchAndRenderChart() {
+      const chartData = await fetch('/water-height-last-2-days').then(res => res.json());
+
+      const data = chartData.map(d => ({
+        label: new Date(d.time),
+        value: d.value * -1 + 4500,
+      }));
+
+      console.log('Chart Data:', data);
+
+      renderD3Chart(data);
+    }
+
+    function renderD3Chart(data) {
+      const canvas = document.getElementById('chartCanvas');
+      const ctx = canvas.getContext('2d');
+    
+      // Clear the canvas before drawing
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+      // Draw the title
+      ctx.fillStyle = 'black';
+      ctx.font = '50px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Live Water Height Chart', canvas.width / 2, 40);
+    
+      // D3.js scales for X and Y axes with adjusted margins
+      const margin = { top: 70, right: 100, bottom: 80, left: 120 };
+      const width = canvas.width - margin.left - margin.right;
+      const height = canvas.height - margin.top - margin.bottom;
+    
+      const x = d3.scaleTime()
+                  .domain(d3.extent(data, d => d.label))
+                  .range([margin.left, width + margin.left]);
+    
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(data, d => d.value)])
+                  .range([height + margin.top, margin.top]);
+    
+      // Define the threshold value
+      const thresholdValue = 3000;
+      
+      // Draw the threshold line
+      const thresholdY = y(thresholdValue);
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(margin.left, thresholdY);
+      ctx.lineTo(width + margin.left, thresholdY);
+      ctx.stroke();
+    
+      // Draw the threshold label
+      ctx.fillStyle = 'red';
+      ctx.font = '20px Arial';
+      ctx.fillText(`Threshold: ${thresholdValue}`, margin.left + 10, thresholdY - 10);
+    
+      // Draw the data line
+      ctx.strokeStyle = 'steelblue';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+
+      const tickInterval = d3.timeHour.every(2);
+      const ticks = x.ticks(tickInterval);
+
+      data.forEach((d, i) => {
+        const xPos = x(d.label);
+        const yPos = y(d.value);
+        if (i === 0) {
+          ctx.moveTo(xPos, yPos);
+        } else {
+          ctx.lineTo(xPos, yPos);
+        }
+        
+        // Find the nearest tick to this data point
+        const nearestTick = ticks.reduce((prev, curr) => 
+          Math.abs(curr - d.label) < Math.abs(prev - d.label) ? curr : prev
+        );
+
+        // If this data point is closest to a tick, print its value
+        if (Math.abs(d.label - nearestTick) < 1000 * 60 * 120) { // Within 30 minutes of a tick
+          ctx.save();
+          ctx.translate(xPos, yPos);
+          ctx.rotate(-Math.PI / 6);
+          ctx.fillStyle = 'black';
+          ctx.font = '8px Arial';
+          ctx.textAlign = 'right';
+          ctx.fillText(d.value.toFixed(2), 0, -5);
+          ctx.restore();
+        }
+      });
+      ctx.stroke();
+
+      // Draw X axis with 2-hour interval
+      ctx.strokeStyle = '#000';
+      ctx.fillStyle = 'black';
+      ctx.beginPath();
+
+      ticks.forEach((tick, i) => {
+        const xPos = x(tick);
+        ctx.moveTo(xPos, height + margin.top);
+        ctx.lineTo(xPos, height + margin.top + 5);
+        ctx.save();
+        ctx.translate(xPos, height + margin.top + 25);
+        ctx.rotate(-Math.PI / 4);
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillText(d3.timeFormat("%b %d %H:%M")(tick), 0, 0);
+        ctx.restore();
+      });
+      ctx.stroke();
+    
+      // Label for X-axis
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Time', width / 2 + margin.left, height + margin.top + 60);
+    
+      // Draw Y axis
+      ctx.beginPath();
+      y.ticks().forEach(tick => {
+        const yPos = y(tick);
+        ctx.moveTo(margin.left - 5, yPos);
+        ctx.lineTo(margin.left, yPos);
+        ctx.fillText(tick, margin.left - 10, yPos + 5);
+      });
+      ctx.stroke();
+    
+      // Label for Y-axis
+      ctx.save();
+      ctx.translate(margin.left - 60, height / 2 + margin.top);
+      ctx.rotate(-Math.PI / 2);
+      ctx.font = '20px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Water Height (mm)', 0, 0);
+      ctx.restore();
+    
+      // Draw Legend
+      const legendX = width + margin.left + 10;
+      const legendY = margin.top;
+      const lineHeight = 20;
+    
+      ctx.fillStyle = 'red';
+      ctx.fillRect(legendX, legendY, 15, 2);
+      ctx.fillStyle = 'black';
+      ctx.font = '16px Arial';
+      ctx.fillText('Threshold', legendX + 20, legendY + 5);
+    
+      ctx.strokeStyle = 'steelblue';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(legendX, legendY + lineHeight + 5);
+      ctx.lineTo(legendX + 15, legendY + lineHeight + 5);
+      ctx.stroke();
+      ctx.fillText('Water Height', legendX + 20, legendY + lineHeight + 8);
+    
+      // Convert the D3 chart into a texture and apply it to the plane
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.needsUpdate = true;
+    
+      const chartplane = document.getElementById('chart-plane');
+      chartplane.setAttribute('material', 'src', texture);
+    }
+
+    async function ReplacePlanesWithWater(scene, width, length, position) {
+      const waterObjects = [];
+      const water = await createManualWaterPlane(width, length, position, scene);
+      waterObjects.push(water);
+      scene.add(water);
+      return waterObjects;
+    }
+
+    async function createManualWaterPlane(width, length, position, scene) {
+      return new Promise((resolve) => {
+        const waterGeometry = new THREE.PlaneGeometry(width, length);
+        new THREE.TextureLoader().load(waterNormalsPath, (texture) => {
+          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+          const water = new THREE.Water(waterGeometry, {
+            textureWidth: 512,
+            textureHeight: 512,
+            waterNormals: texture,
+            sunDirection: new THREE.Vector3(),
+            sunColor: 0xffffff,
+            waterColor: 0x00faff,
+            distortionScale: 3.7,
+            fog: scene.fog !== undefined,
+          });
+          water.rotation.x = -Math.PI / 2;
+          water.position.copy(position);
+          resolve(water);
+        });
+      });
+    }
+
+    function animateWater(water) {
+      if (water && water.material && water.material.uniforms && water.material.uniforms['time']) {
+        water.material.uniforms['time'].value += 1.0 / 100.0;
+      } else {
+        console.warn('Water uniforms not set properly:', water.material.uniforms);
+      }
+    }
+
+    const iframe = document.getElementById('web-content');
+
+  </script>
+</body>
+</html>

@@ -1,336 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>My A-Frame Scene with Water Gauge and D3.js Chart</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://unpkg.com/aframe-environment-component@1.3.3/dist/aframe-environment-component.min.js"></script>
-  <script src="https://unpkg.com/aframe-orbit-controls@1.3.2/dist/aframe-orbit-controls.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Water.js"></script>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-</head>
+    <title>Water Scout</title>
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">    
+    <link rel="shortcut icon" href="favicon.ico">  
+    <link href='https://fonts.googleapis.com/css?family=Lato:300,400,300italic,400italic' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'> 
+    <!-- FontAwesome JS-->
+	<script defer src="./src/fontawesome/js/all.min.js"></script>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="./src/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->    
+    <link rel="stylesheet" href="./src/plugins/prism/prism.css">
+    <!-- Theme CSS -->  
+    <link id="theme-style" rel="stylesheet" href="./src/css/theme-1.css">
+    <!-- GitHub Button -->
+    <script async defer src="https://buttons.github.io/buttons.js"></script> 
+</head> 
 
-<body>
-  <a-scene>
-    <a-entity 
-      id="housemill"
-      gltf-model="./src/models/HouseMillLowpoly.gltf" 
-      position="0 0 0" 
-      scale="3 3 3"
-      replace-planes-with-water>
-    </a-entity>
+<body data-spy="scroll">
+	
+   
 
-    <a-entity 
-      id="water-gauge"
-      gltf-model="./src/models/water_gauge.gltf" 
-      position="-18 -3.1 -12" 
-      scale="100 100 100">
-    </a-entity>
+   
+    <!-- ******HEADER****** --> 
+    <header id="header" class="header">                          
+        <nav id="main-nav" class="main-nav navbar navbar-expand-md">
+            <div class="container-fluid">
+            <a class="navbar-brand logo scrollto" href="#promo">
+                <span class="logo-title">Water Scout</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar-collapse"  aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button><!--//nav-toggle-->
+                       
+            <div class="navbar-collapse collapse" id="navbar-collapse">
+                <ul id="nav-menu" class="nav navbar-nav ms-md-auto">
+                    <li class="nav-item sr-only"><a class="nav-link scrollto" href="#promo">Home</a></li>
+                    <li class="nav-item"><a class="nav-link scrollto" href="#about">About</a></li>
+                    <li class="nav-item"><a class="nav-link scrollto" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link scrollto" href="#docs">Docs</a></li>
+                    <li class="nav-item"><a class="nav-link scrollto" href="#license">License</a></li>                        
+                    <li class="nav-item last"><a class="nav-link scrollto" href="#contact">Contact</a></li>
+                </ul><!--//nav-->
+            </div><!--//navabr-collapse-->
+            </div>
+        </nav><!--//main-nav-->
+    </header><!--//header-->
     
-    <a-plane id="device-plane" position="-9 15 -3" width="12" height="10" color="#FFF" rotation="320 185 0"></a-plane>
-    <a-plane id="chart-plane" position="-24 15 -2" width="15" height="10" color="#FFF" rotation="320 185 0"></a-plane>
+    <!-- ******PROMO****** -->
+    <section id="promo" class="promo section offset-header">
+        <div class="container text-center">
+            <div>            
+                <img src="./src/images/device.png" alt="Responsive image" class="map img-resonsive">
+            </div>
+            <h2 class="title">Water<span class="highlight"> Scout</span></h2>
 
-    <a-sky color="lightblue"></a-sky>
 
-    <a-entity 
-      camera 
-      look-controls="enabled: false" 
-      orbit-controls="target:-10 10 15; minDistance: 2; maxDistance: 180; initialPosition: 5 20 -35; rotateSpeed: 0.5">
-    </a-entity>
-  </a-scene>
+            <p class="intro">A low-cost, water height monitoring system with real-time data and 3D visualisations</p>
+            <div class="btns d-grip">
+                <a class="btn btn-cta-secondary" href="arjs.html" target="_blank">VR Mode</a>
+                <a class="btn btn-cta-primary" href="visualisation.html" target="_blank">3D Visualisations</a>
+            </div>
 
-  <canvas id="chartCanvas" width="1024" height="512" style="display:none;"></canvas>
-  <script>
-    const waterNormalsPath = './src/textures/waternormals.jpg';
+        </div><!--//container-->
 
-    AFRAME.registerComponent('replace-planes-with-water', {
-      init: async function () {
-        const scene = this.el.sceneEl.object3D;
-
-        console.log("Initializing water component");
-
-        const waterHeightData = await fetch('/latest-water-height').then(res => res.json());
-        const waterHeightValue = waterHeightData._value * -1 + 4500;
-
-        const waterPlaneWidth = 63; 
-        const waterPlaneLength = 28; 
-        const yPosition = 0.001 * waterHeightValue - 3.3;
-        const waterPlanePosition = new THREE.Vector3(7, yPosition, -13);
-
-        const waterObjects = await ReplacePlanesWithWater(scene, waterPlaneWidth, waterPlaneLength, waterPlanePosition);
-
-        console.log("Water objects created:", waterObjects);
-
-        this.el.sceneEl.addEventListener('renderstart', function () {
-          scene.onBeforeRender = () => {
-            waterObjects.forEach(animateWater);
-          };
-        });
-
-        fetchAndRenderChart();
-        fetchAndRenderBatteryData();  
-      }
-    });
-
-    async function fetchAndRenderBatteryData() {
-      const batteryData = await fetch('/latest-battery-data').then(res => res.json());
-
-      console.log('Live Device Data:', batteryData._value);
-
-      renderBatteryData(batteryData._value);
-    }
-    function renderBatteryData(data) {
-      const canvas = document.getElementById('chartCanvas');
-      const ctx = canvas.getContext('2d');
-      
-      // Clear the canvas before drawing
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw the title
-      ctx.fillStyle = 'black';
-      ctx.font = '50px Arial'; // Increased font size
-      ctx.textAlign = 'center';
-      ctx.fillText('Live Device Data', canvas.width / 2, 60); // Moved down slightly
-      
-      // Define text positions with larger margin and increased font size
-      const textX = 100; // Added left margin
-      let textY = 150; // Adjusted starting Y position
-      const lineHeight = 50; // Increased line height
+    </section><!--//promo-->
     
-      // Define units for specific fields
-      const units = {
-        battery_voltage: 'V',
-        battery_percentage: '%',
-        distance: 'mm'
-      };
+    <!-- ******ABOUT****** --> 
+    <section id="about" class="about section">
+        <div class="container">
+            <h2 class="title text-center">What is Water Scout?</h2>
+            <p class="intro text-center">The Water Scout project aims to create an affordable, self-powered device that uses ultrasonic sensors and LoRaWAN technology to monitor real-time water levels in urban areas. This device helps improve flood risk assessment by collecting data from the community, filling in gaps left by traditional methods. The data is then displayed on a web dashboard with 3D visualization, making it easier for people to understand water height.</p>
+            <div class="row">
+                <div class="item col-lg-6 col-md-6 col-12">
+                    <div class="icon-holder">
+                        <i class="fa-solid fa-heart"></i>
+                    </div>
+                    <div class="content">
+                        <h3 class="sub-title">Low-Cost for Mass Deployment</h3>
+                        <p>Using only open-source stack and low-cost devices, enabling mass deployment for enriching spatial data.</p>
+                    </div><!--//content-->
+                </div><!--//item-->
+                <div class="item col-lg-6 col-md-6 col-12">
+                    <div class="icon-holder">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <div class="content">
+                        <h3 class="sub-title">Real-Time Monitoring</h3>
+                        <p>Leveraging WebXR technology, Water Scout's visualizations are immersive and accessible on various platforms, providing an engaging way to view water levels and assess flood risks.</p>
+                    </div><!--//content-->
+                </div><!--//item-->
+                <div class="item col-lg-6 col-md-6 col-12">
+                    <div class="icon-holder">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="content">
+                        <h3 class="sub-title">Community Driven</h3>
+                        <p>Driven by citizen participation to fortify resilience to flood risk.</p>
+                    </div><!--//content-->
+                </div><!--//item-->            
+                <div class="item col-lg-6 col-md-6 col-12">
+                    <div class="icon-holder">
+                        <i class="fa-solid fa-mobile-alt"></i>
+                    </div>
+                    <div class="content">
+                        <h3 class="sub-title">Mobile-Friendly</h3>
+                        <p>Developed as a web-based application, allowing access from PC or smartphone without a special app.</p>
+                    </div><!--//content-->
+                </div><!--//item-->                
+            </div><!--//row-->       
+        </div><!--//container-->
+    </section><!--//about-->
     
-      // Iterate over battery data fields
-      Object.keys(data).forEach(key => {
-        ctx.textAlign = 'left';
-        ctx.fillStyle = 'black';
-        ctx.font = '36px Arial'; // Larger font size for the data
+    <!-- ******FEATURES****** --> 
+    <section id="features" class="features section">
+        <div class="container text-center">
+            <h2 class="title">Features</h2>
+            <ul class="feature-list list-unstyled">
+                <li><i class="fa-solid fa-check"></i> Open Source Project</li>
+                <li><i class="fa-solid fa-check"></i> Low-cost and self-powered device </li>
+                <li><i class="fa-solid fa-check"></i> Built on WebXR technology</li>
+                <li><i class="fa-solid fa-check"></i> Real-Time Monitoring & Visualisations</li>
+            </ul>
+        </div><!--//container-->
+    </section><!--//features-->
+    
+    <!-- ******DOCS****** --> 
+    <section id="docs" class="docs section">
+        <div class="container">
+            <div class="docs-inner">
+            <h2 class="title text-center">Get Started</h2>            
+            <div class="block">
+                <h3 class="sub-title text-center">Real-Time Monitoring powered by Arduino with LoRAWAN</h3>
+                <p class="text-justify">Water Scout uses LoRaWAN technology to provide reliable, long-range communication with minimal power consumption, allowing the device to operate for extended periods without maintenance.</p>
+                <p class="text-justify">It transmits real-time water level data to the web dashboard, where it is visualized in 3D, providing clear and accessible flood information for all users.</p>
+                <div>            
+                    <img src="./src/images/animation.gif" alt="" class="map img-resonsive">
+                </div>
+            </div><!--//block-->
+
+            <div class="block">
+                <h3 class="sub-title text-center">WebXR for 3D visualisations</h3>
+                <p class="text-justify">Leveraging WebXR technology, Water Scout's visualizations are immersive and accessible on various platforms, providing an engaging way to view water levels and assess flood risks.</p>
+                    <div>            
+                        <img src="./src/images/webxr.png" alt="" class="map img-resonsive">
+                    </div>
+                </div><!--//block-->
+
+            <div class="block">
+                <h3 class="sub-title text-center">Augmented Reality (AR) Experience</h3>
+                <p class="text-justify">Experience real-time flood data in your environment using AR, making it easier to visualize and understand potential impacts directly from your smartphone or AR-enabled device.</p>
+                <div class="code-block">
+
+                </div><!--//code-block-->
+            </div><!--//block-->   
+            <div class="block">
+                <h3 class="sub-title text-center">Full Documentation</h3>
+                <p class="text-justify">Find everything you need to set up and customize your Water Scout project on GitHub, including detailed instructions, FAQs, and community support.</p>
+                <p class="text-center">
+                    <a class="btn btn-cta-primary" href="https://github.com/satria-mitra/CASA0022-Water-Scout" target="_blank">More on GitHub</a>
+                </p>
+            </div><!--//block-->
+            
+            </div><!--//docs-inner-->         
+        </div><!--//container-->
+    </section><!--//features-->
+    
+   
+      <!-- ******CONTACT****** --> 
+      <section id="contact" class="contact section has-pattern">
+        <div class="container">
+            <div class="contact-inner">
+                <h2 class="title  text-center">Meet The Developer</h2>
+                <p class="intro  text-center">Hi, I hope you find this project useful. <br />Feel free to get in touch if you have any questions or suggestions.</p>
+                <div class="author-message">                      
+                    <div class="profile">
+                        <img class="img-fluid" src="./src/images/satria.gif" alt="" />
+                    </div><!--//profile-->
+                    <div class="speech-bubble">
+                        <h3 class="sub-title">Satria Mitra Utama</h3>
+                        <p><a href="https://twitter.com/strmu" target="_blank"></p>
+                        <div class="source">
+                            <span class="name"><a href="https://twitter.com/strmu" target="_blank">Satria Utama</a></span>
+                            <br />
+                            <span class="title">IoT Engineer</span>
+                        </div><!--//source-->
+                    </div><!--//speech-bubble-->                        
+                </div><!--//author-message-->
+                <div class="info text-center">
+                    <h4 c
+      
+    <!-- ******FOOTER****** --> 
+    <footer class="footer">
+        <div class="container text-center">
+            <!--/* This template is free as long as you keep the footer attribution link. If you'd like to use the template without the attribution link, you can buy the commercial license via our website: themes.3rdwavemedia.com Thank you for your support. :) */-->
+            <small class="copyright">Designed with <span class="sr-only">love</span><i class="fas fa-heart"></i> by <a href="https://themes.3rdwavemedia.com" target="_blank">Xiaoying Riley</a> for developers</small>
+        </div><!--//container-->
+    </footer><!--//footer-->
+     
+    <!-- Javascript -->          
+    <script src="./src/plugins/bootstrap/js/bootstrap.min.js"></script> 
+    <script src="./src/plugins/prism/prism.js"></script>    
+    <script src="./src/plugins/gumshoe/gumshoe.polyfills.min.js"></script> 
+    <script src="./src/js/main.js"></script>  
+    
         
-        // Append unit if available, otherwise just print the value
-        const valueWithUnit = `${data[key]}${units[key] ? ` ${units[key]}` : ''}`;
-        ctx.fillText(`${key}: ${valueWithUnit}`, textX, textY);
-        textY += lineHeight;
-      });
-      
-      // Convert the D3 chart into a texture and apply it to the plane
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-    
-      const devicePlane = document.getElementById('device-plane');
-      devicePlane.setAttribute('material', 'src', texture);
-    }
-    
-    
-
-    async function fetchAndRenderChart() {
-      const chartData = await fetch('/water-height-last-2-days').then(res => res.json());
-
-      const data = chartData.map(d => ({
-        label: new Date(d.time),
-        value: d.value * -1 + 4500,
-      }));
-
-      console.log('Chart Data:', data);
-
-      renderD3Chart(data);
-    }
-
-    function renderD3Chart(data) {
-      const canvas = document.getElementById('chartCanvas');
-      const ctx = canvas.getContext('2d');
-    
-      // Clear the canvas before drawing
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-      // Draw the title
-      ctx.fillStyle = 'black';
-      ctx.font = '50px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Live Water Height Chart', canvas.width / 2, 40);
-    
-      // D3.js scales for X and Y axes with adjusted margins
-      const margin = { top: 70, right: 100, bottom: 80, left: 120 };
-      const width = canvas.width - margin.left - margin.right;
-      const height = canvas.height - margin.top - margin.bottom;
-    
-      const x = d3.scaleTime()
-                  .domain(d3.extent(data, d => d.label))
-                  .range([margin.left, width + margin.left]);
-    
-      const y = d3.scaleLinear()
-                  .domain([0, d3.max(data, d => d.value)])
-                  .range([height + margin.top, margin.top]);
-    
-      // Define the threshold value
-      const thresholdValue = 3000;
-      
-      // Draw the threshold line
-      const thresholdY = y(thresholdValue);
-      ctx.strokeStyle = 'red';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(margin.left, thresholdY);
-      ctx.lineTo(width + margin.left, thresholdY);
-      ctx.stroke();
-    
-      // Draw the threshold label
-      ctx.fillStyle = 'red';
-      ctx.font = '20px Arial';
-      ctx.fillText(`Threshold: ${thresholdValue}`, margin.left + 10, thresholdY - 10);
-    
-      // Draw the data line
-      ctx.strokeStyle = 'steelblue';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-
-      const tickInterval = d3.timeHour.every(2);
-      const ticks = x.ticks(tickInterval);
-
-      data.forEach((d, i) => {
-        const xPos = x(d.label);
-        const yPos = y(d.value);
-        if (i === 0) {
-          ctx.moveTo(xPos, yPos);
-        } else {
-          ctx.lineTo(xPos, yPos);
-        }
-        
-        // Find the nearest tick to this data point
-        const nearestTick = ticks.reduce((prev, curr) => 
-          Math.abs(curr - d.label) < Math.abs(prev - d.label) ? curr : prev
-        );
-
-        // If this data point is closest to a tick, print its value
-        if (Math.abs(d.label - nearestTick) < 1000 * 60 * 120) { // Within 30 minutes of a tick
-          ctx.save();
-          ctx.translate(xPos, yPos);
-          ctx.rotate(-Math.PI / 6);
-          ctx.fillStyle = 'black';
-          ctx.font = '8px Arial';
-          ctx.textAlign = 'right';
-          ctx.fillText(d.value.toFixed(2), 0, -5);
-          ctx.restore();
-        }
-      });
-      ctx.stroke();
-
-      // Draw X axis with 2-hour interval
-      ctx.strokeStyle = '#000';
-      ctx.fillStyle = 'black';
-      ctx.beginPath();
-
-      ticks.forEach((tick, i) => {
-        const xPos = x(tick);
-        ctx.moveTo(xPos, height + margin.top);
-        ctx.lineTo(xPos, height + margin.top + 5);
-        ctx.save();
-        ctx.translate(xPos, height + margin.top + 25);
-        ctx.rotate(-Math.PI / 4);
-        ctx.font = '14px Arial';
-        ctx.textAlign = 'right';
-        ctx.fillText(d3.timeFormat("%b %d %H:%M")(tick), 0, 0);
-        ctx.restore();
-      });
-      ctx.stroke();
-    
-      // Label for X-axis
-      ctx.font = '14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Time', width / 2 + margin.left, height + margin.top + 60);
-    
-      // Draw Y axis
-      ctx.beginPath();
-      y.ticks().forEach(tick => {
-        const yPos = y(tick);
-        ctx.moveTo(margin.left - 5, yPos);
-        ctx.lineTo(margin.left, yPos);
-        ctx.fillText(tick, margin.left - 10, yPos + 5);
-      });
-      ctx.stroke();
-    
-      // Label for Y-axis
-      ctx.save();
-      ctx.translate(margin.left - 60, height / 2 + margin.top);
-      ctx.rotate(-Math.PI / 2);
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Water Height (mm)', 0, 0);
-      ctx.restore();
-    
-      // Draw Legend
-      const legendX = width + margin.left + 10;
-      const legendY = margin.top;
-      const lineHeight = 20;
-    
-      ctx.fillStyle = 'red';
-      ctx.fillRect(legendX, legendY, 15, 2);
-      ctx.fillStyle = 'black';
-      ctx.font = '16px Arial';
-      ctx.fillText('Threshold', legendX + 20, legendY + 5);
-    
-      ctx.strokeStyle = 'steelblue';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(legendX, legendY + lineHeight + 5);
-      ctx.lineTo(legendX + 15, legendY + lineHeight + 5);
-      ctx.stroke();
-      ctx.fillText('Water Height', legendX + 20, legendY + lineHeight + 8);
-    
-      // Convert the D3 chart into a texture and apply it to the plane
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-    
-      const chartplane = document.getElementById('chart-plane');
-      chartplane.setAttribute('material', 'src', texture);
-    }
-
-    async function ReplacePlanesWithWater(scene, width, length, position) {
-      const waterObjects = [];
-      const water = await createManualWaterPlane(width, length, position, scene);
-      waterObjects.push(water);
-      scene.add(water);
-      return waterObjects;
-    }
-
-    async function createManualWaterPlane(width, length, position, scene) {
-      return new Promise((resolve) => {
-        const waterGeometry = new THREE.PlaneGeometry(width, length);
-        new THREE.TextureLoader().load(waterNormalsPath, (texture) => {
-          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-          const water = new THREE.Water(waterGeometry, {
-            textureWidth: 512,
-            textureHeight: 512,
-            waterNormals: texture,
-            sunDirection: new THREE.Vector3(),
-            sunColor: 0xffffff,
-            waterColor: 0x00faff,
-            distortionScale: 3.7,
-            fog: scene.fog !== undefined,
-          });
-          water.rotation.x = -Math.PI / 2;
-          water.position.copy(position);
-          resolve(water);
-        });
-      });
-    }
-
-    function animateWater(water) {
-      if (water && water.material && water.material.uniforms && water.material.uniforms['time']) {
-        water.material.uniforms['time'].value += 1.0 / 100.0;
-      } else {
-        console.warn('Water uniforms not set properly:', water.material.uniforms);
-      }
-    }
-
-    const iframe = document.getElementById('web-content');
-
-  </script>
 </body>
-</html>
+</html> 
+

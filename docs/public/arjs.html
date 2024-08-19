@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>ARTES</title>
+    <!--AFrame version 1.2.0-->
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <!--AR.js version 3.1.0-->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.1.0/aframe/build/aframe-ar.js"></script>
+    <!--MQTT.js-->
+    <script type="text/javascript" src="https://unpkg.com/mqtt@2.18.3/dist/mqtt.min.js"></script>
+
+    <script src="./src/js/markerManager.js"></script>
+    <!--plant.gltf model "Low Poly Plant in a pot" (https://skfb.ly/o6u8M) by eucalyp555 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).-->
+</head>
+
+<body style="overflow: hidden;">
+    <a-scene embedded arjs="debugUIEnabled: false; sourceType: webcam; trackingMethod: best; patternRatio: 0.85"
+        color-space="sRGB" vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: false; physicallyCorrectLights: true; colorManagement: true; "
+        markers_start_json
+        timenow 
+        registerevents>
+
+        <assets>
+            <!-- <a-asset-item id="plant_gltf" src="resources/models/plant/scene.gltf"></a-asset-item> -->
+            <a-asset-item id="plant_gltf" src="./src/models/housemill_slimv2.gltf"></a-asset-item>
+            <a-asset-item id="display_glb" src="./src/models/display.glb"></a-asset-item>
+            <a-asset-item id="gauge_glb" src="./src/models/water_gauge.glf"></a-asset-item>
+
+        </assets>
+
+        <a-entity id='userCamera' camera> </a-entity>
+
+    </a-scene>
+
+
+</body>
+
+</html>

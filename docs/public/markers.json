@@ -1,0 +1,31 @@
+{
+  "info": {
+    "version": "1.0",
+    "title": "WebAR-MultiMarkers",
+    "markers": 2
+  },
+  "content": [
+    {
+      "markerName": "hiro",
+      "topic": "TOPIC TO SUBSCRIBE",
+      "subtopics": [
+        "batt_voltage",
+        "humidity",
+        "moisture"
+      ],
+      "type": "",
+      "textContent": "SAMPLE TEXT"
+    },
+    {
+      "markerName": "waterscout",
+      "topic": "water-height",
+      "subtopics": [
+        "distance",
+        "batt_voltage",
+        "batt_percentage"
+      ],
+      "type": "",
+      "textContent": "SAMPLE TEXT"
+    }
+  ]
+}
