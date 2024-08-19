@@ -34,10 +34,37 @@ async function fetchLatestWaterHeight() {
   });
 }
 
+async function fetchLatestBatteryData() {
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -1h)
+      |> filter(fn: (r) => r["_measurement"] == "water-level")
+      |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "rssi" or r["_field"] == "sni" or r["_field"] == "DateTime")
+      |> last()`;
+
+  return new Promise((resolve, reject) => {
+    const latestValues = {};
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row);
+        latestValues[o._field] = o._value;
+      },
+      error(error) {
+        console.error('Query failed', error);
+        reject(error);
+      },
+      complete() {
+        resolve(latestValues);
+      }
+    });
+  });
+}
+
+
 async function fetchWaterHeightLast2Days() {
   const query = `
     from(bucket: "${bucket}")
-      |> range(start: -2d)
+      |> range(start: -1d)
       |> filter(fn: (r) => r["_measurement"] == "water-level")
       |> filter(fn: (r) => r["_field"] == "distance")
       |> sort(columns: ["_time"], desc: true)
@@ -64,7 +91,9 @@ async function fetchWaterHeightLast2Days() {
   });
 }
 
+
 module.exports = {
   fetchLatestWaterHeight,
   fetchWaterHeightLast2Days,
+  fetchLatestBatteryData
 };

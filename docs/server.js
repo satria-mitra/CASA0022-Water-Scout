@@ -1,9 +1,9 @@
 const express = require('express');
 const path = require('path');
-const { fetchLatestWaterHeight, fetchWaterHeightLast2Days } = require('./influxdbClient');
+const { fetchLatestWaterHeight, fetchWaterHeightLast2Days, fetchLatestBatteryData } = require('./influxdbClient');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -13,6 +13,15 @@ app.get('/latest-water-height', async (req, res) => {
     res.json({ _value: data });
   } catch (error) {
     res.status(500).send({ error: 'Failed to fetch latest water height' });
+  }
+});
+
+app.get('/latest-battery-data', async (req, res) => {
+  try {
+    const data = await fetchLatestBatteryData();
+    res.json({ _value: data });
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to fetch latest battery data' });
   }
 });
 
