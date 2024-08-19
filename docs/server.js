@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { fetchLatestWaterHeight, fetchWaterHeightLast2Days, fetchLatestBatteryData, fetchLatestData} = require('./influxdbClient');
+const { fetchLatestWaterHeight, fetchWaterHeightLast2Days, fetchLatestBatteryData, fetchLatestData} = require('./public/src/js/influxdbClient');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
