@@ -6,7 +6,7 @@
 Please visit this link instead
 
 
-[Water Scout Web Project](https://casa0022-water-scout.onrender.com)
+[Water Scout Web Project](https://casa-0022-water-scout.vercel.app/)
 
 
 
