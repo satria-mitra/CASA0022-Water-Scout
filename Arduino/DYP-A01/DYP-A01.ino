@@ -59,7 +59,7 @@ DYP_A01 sensor;
 
 
 /******** Pin, Variables and Class for LoRaWAN Connections **********/
-#define MAX_JOIN_ATTEMPTS 8
+#define MAX_RETRY_CONNECTION 8
 #define JOIN_RETRY_DELAY_MINUTES 2 
 #define JOIN_RETRY_SLEEP_MINUTES 30 // Rejoin LoRa Network in the next 30 minutes
 #define LORA_CONNECTION_STABILIZATION_DELAY_SECONDS 5 // Stabilize LoRa connections
