@@ -21,7 +21,8 @@ async function fetchLatestWaterHeight() {
     queryApi.queryRows(query, {
       next(row, tableMeta) {
         const o = tableMeta.toObject(row);
-        latestValue = o._value;
+        // Perform the calculation: distance * -1 + 4500
+        latestValue = o._value * -1 + 4500;
       },
       error(error) {
         console.error('Query failed', error);
@@ -33,6 +34,7 @@ async function fetchLatestWaterHeight() {
     });
   });
 }
+
 
 async function fetchLatestBatteryData() {
   const query = `
@@ -47,7 +49,12 @@ async function fetchLatestBatteryData() {
     queryApi.queryRows(query, {
       next(row, tableMeta) {
         const o = tableMeta.toObject(row);
-        latestValues[o._field] = o._value;
+        if (o._field === "distance") {
+          // Perform the calculation: distance * -1 + 4500
+          latestValues[o._field] = o._value * -1 + 4500;
+        } else {
+          latestValues[o._field] = o._value;
+        }
       },
       error(error) {
         console.error('Query failed', error);
@@ -59,6 +66,7 @@ async function fetchLatestBatteryData() {
     });
   });
 }
+
 
 
 async function fetchWaterHeightLast2Days() {
@@ -103,16 +111,7 @@ async function fetchLatestData() {
 
   try {
     const rows = await queryApi.collectRows(query);
-    if (rows.length > 0) {
-      rows.forEach(row => {
-        if (row._field === "distance") {
-          // Modify the distance value as required
-          result[row._field] = (row._value * -1) + 4500;
-        } else {
-          result[row._field] = row._value;
-        }
-      });
-    }
+
   } catch (error) {
     console.error('Error fetching data from InfluxDB:', error);
   }
