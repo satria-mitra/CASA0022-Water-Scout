@@ -44,19 +44,24 @@ async function fetchLatestBatteryData() {
       |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "rssi" or r["_field"] == "sni" or r["_field"] == "DateTime")
       |> last()`;
 
-  return new Promise((resolve, reject) => {
-    const latestValues = {};
-    queryApi.queryRows(query, {
-      error(error) {
-        console.error('Query failed', error);
-        reject(error);
-      },
-      complete() {
-        resolve(latestValues);
-      }
-    });
-  });
-}
+      return new Promise((resolve, reject) => {
+        let latestValue;
+        queryApi.queryRows(query, {
+          next(row, tableMeta) {
+            const o = tableMeta.toObject(row);
+            // Perform the calculation: distance * -1 + 4500
+            latestValue = o._value * -1 + 4500;
+          },
+          error(error) {
+            console.error('Query failed', error);
+            reject(error);
+          },
+          complete() {
+            resolve(latestValue);
+          }
+        });
+      });
+    }
 
 
 
