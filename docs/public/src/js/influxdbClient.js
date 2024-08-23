@@ -98,16 +98,18 @@ async function fetchLatestData() {
       |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "solar_status" or r["_field"] == "snr" or r["_field"] == "rssi")
       |> last()`;
 
-  let result = {};
-
-  try {
-    const rows = await queryApi.collectRows(query);
-
-  } catch (error) {
-    console.error('Error fetching data from InfluxDB:', error);
-  }
-
-  return result;
+      return new Promise((resolve, reject) => {
+        const latestValues = {};
+        queryApi.queryRows(query, {
+          error(error) {
+            console.error('Query failed', error);
+            reject(error);
+          },
+          complete() {
+            resolve(latestValues);
+          }
+        });
+      });
 }
 
 
