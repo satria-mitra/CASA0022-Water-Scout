@@ -49,11 +49,13 @@
         console.log("Initializing water component");
 
         const waterHeightData = await fetch('/latest-water-height').then(res => res.json());
-        const waterHeightValue = waterHeightData._value * -1 + 4500;
-
+        console.log("Water height :", waterHeightData);
+        const waterHeightValue = waterHeightData._value/1000;
         const waterPlaneWidth = 63; 
         const waterPlaneLength = 28; 
-        const yPosition = 0.001 * waterHeightValue - 3.3;
+        const yPosition = 1.05 * waterHeightValue - 3.3;
+        console.log("Water height position:", yPosition);
+
         const waterPlanePosition = new THREE.Vector3(7, yPosition, -13);
 
         const waterObjects = await ReplacePlanesWithWater(scene, waterPlaneWidth, waterPlaneLength, waterPlanePosition);

@@ -105,7 +105,12 @@ async function fetchLatestData() {
     const rows = await queryApi.collectRows(query);
     if (rows.length > 0) {
       rows.forEach(row => {
-        result[row._field] = row._value;
+        if (row._field === "distance") {
+          // Modify the distance value as required
+          result[row._field] = (row._value * -1) + 4500;
+        } else {
+          result[row._field] = row._value;
+        }
       });
     }
   } catch (error) {
@@ -114,6 +119,7 @@ async function fetchLatestData() {
 
   return result;
 }
+
 
 
 module.exports = {
