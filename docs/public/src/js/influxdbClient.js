@@ -45,19 +45,21 @@ async function fetchLatestBatteryData() {
       |> last()`;
 
       return new Promise((resolve, reject) => {
-        let latestValue;
+        const results = [];
         queryApi.queryRows(query, {
           next(row, tableMeta) {
             const o = tableMeta.toObject(row);
-            // Perform the calculation: distance * -1 + 4500
-            latestValue = o._value * -1 + 4500;
+            results.push({
+              time: o._time,
+              value: o._value,
+            });
           },
           error(error) {
             console.error('Query failed', error);
             reject(error);
           },
           complete() {
-            resolve(latestValue);
+            resolve(results);
           }
         });
       });
