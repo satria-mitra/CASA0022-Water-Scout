@@ -61,7 +61,7 @@ AFRAME.registerComponent('registerevents', {
 
     fetchInfluxDBData: async function() {
         try {
-            const response = await fetch('/latest-data'); // Adjust this URL based on your server's address
+            const response = await fetch('/latest-data'); 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -93,10 +93,10 @@ AFRAME.registerComponent('registerevents', {
 
     updatePlanePosition: function(model, distance) {
         console.log('Updating Plane position based on distance:', distance);
-
+        console.log("distance value :", distance);
         // Calculate the y position based on the distance
-        var calculatedDistance = distance* -1 + 4500;
-        const yPosition = -1.2 + (calculatedDistance / 7000) * 2.2;
+        //var calculatedDistance = distance* -1 + 4500;
+        //const yPosition = -1.2 + (calculatedDistance / 7000) * 2.2;
 
         // Traverse the model and update the y position and color of the plane
         model.traverse((node) => {
@@ -105,7 +105,7 @@ AFRAME.registerComponent('registerevents', {
             }
             if (node.name === 'Plane' && node.type === 'Mesh') {
                 console.log('Plane found:', node);
-                node.position.y = yPosition; // Update the y position based on the distance
+                //node.position.y = yPosition; // Update the y position based on the distance
                 node.material.color.r= 100/255; // Change the color to light blue
                 node.material.color.g= 240/255; // Change the color to light blue
                 node.material.color.b= 255/255; // Change the color to light blue
@@ -172,7 +172,7 @@ AFRAME.registerComponent('markers_start_json', {
                       modelplant.setAttribute('gltf-model', '#plant_gltf');
                       modelplant.setAttribute('rotation', { x: 0, y: 180, z: 0 });
                       modelplant.object3D.position.set(-0.2, 0, 0);
-                      modelplant.object3D.scale.set(0.2, 0.2, 0.2);
+                      modelplant.object3D.scale.set(0.15, 0.15, 0.15);
                       modelplant.setAttribute('inspect-model', ''); // Add the inspect-model component here
                       plantRT.appendChild(modelplant);
 

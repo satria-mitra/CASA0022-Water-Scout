@@ -41,7 +41,7 @@ async function fetchLatestBatteryData() {
     from(bucket: "${bucket}")
       |> range(start: -1h)
       |> filter(fn: (r) => r["_measurement"] == "water-level")
-      |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "rssi" or r["_field"] == "sni" or r["_field"] == "DateTime")
+      |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "rssi" or r["_field"] == "snr" or r["_field"] == "DateTime")
       |> last()`;
 
       return new Promise((resolve, reject) => {
@@ -105,19 +105,24 @@ async function fetchLatestData() {
       |> filter(fn: (r) => r["_field"] == "distance" or r["_field"] == "battery_percentage" or r["_field"] == "battery_voltage" or r["_field"] == "battery_status" or r["_field"] == "solar_status" or r["_field"] == "snr" or r["_field"] == "rssi")
       |> last()`;
 
-      return new Promise((resolve, reject) => {
-        const latestValues = {};
-        queryApi.queryRows(query, {
-          error(error) {
-            console.error('Query failed', error);
-            reject(error);
-          },
-          complete() {
-            resolve(latestValues);
-          }
-        });
-      });
+  return new Promise((resolve, reject) => {
+    const latestValues = {};
+    queryApi.queryRows(query, {
+      next(row, tableMeta) {
+        const o = tableMeta.toObject(row);
+        latestValues[o._field] = o._value;
+      },
+      error(error) {
+        console.error('Query failed', error);
+        reject(error);
+      },
+      complete() {
+        resolve(latestValues);
+      }
+    });
+  });
 }
+
 
 
 

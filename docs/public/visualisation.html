@@ -40,6 +40,7 @@
 
   <canvas id="chartCanvas" width="1024" height="512" style="display:none;"></canvas>
   <script>
+    
     const waterNormalsPath = './src/textures/waternormals.jpg';
 
     AFRAME.registerComponent('replace-planes-with-water', {
@@ -49,11 +50,11 @@
         console.log("Initializing water component");
 
         const waterHeightData = await fetch('/latest-water-height').then(res => res.json());
-        console.log("Water height :", waterHeightData);
-        const waterHeightValue = waterHeightData._value/1000;
+        console.log("Water height :", waterHeightData._value);
+        const waterHeightValue = waterHeightData._value;
         const waterPlaneWidth = 63; 
         const waterPlaneLength = 28; 
-        const yPosition = 1.05 * waterHeightValue - 3.3;
+        const yPosition = 0.0010222 * waterHeightValue -3.2;
         console.log("Water height position:", yPosition);
 
         const waterPlanePosition = new THREE.Vector3(7, yPosition, -13);
@@ -75,12 +76,14 @@
 
     async function fetchAndRenderBatteryData() {
       const batteryData = await fetch('/latest-battery-data').then(res => res.json());
-
+    
       console.log('Live Device Data:', batteryData._value);
-
+    
+      // Assuming you want to render all the values in the array
       renderBatteryData(batteryData._value);
     }
-    function renderBatteryData(data) {
+    
+    function renderBatteryData(dataArray) {
       const canvas = document.getElementById('chartCanvas');
       const ctx = canvas.getContext('2d');
       
@@ -91,35 +94,38 @@
       
       // Draw the title
       ctx.fillStyle = 'black';
-      ctx.font = '50px Arial'; // Increased font size
+      ctx.font = '50px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('Live Device Data', canvas.width / 2, 60); // Moved down slightly
+      ctx.fillText('Live Device Data', canvas.width / 2, 60);
       
-      // Define text positions with larger margin and increased font size
-      const textX = 100; // Added left margin
-      let textY = 150; // Adjusted starting Y position
-      const lineHeight = 50; // Increased line height
+      // Define text positions
+      const textX = 100;
+      let textY = 100;
+      const lineHeight = 50;
     
-      // Define units for specific fields
-      const units = {
-        battery_voltage: 'V',
-        battery_percentage: '%',
-        distance: 'mm'
-      };
-    
-      // Iterate over battery data fields
-      Object.keys(data).forEach(key => {
+      // Display the time once
+      if (dataArray.length > 0) {
         ctx.textAlign = 'left';
         ctx.fillStyle = 'black';
-        ctx.font = '36px Arial'; // Larger font size for the data
+        ctx.font = '36px Arial';
+        textY += lineHeight;
+      }
+    
+      // Map each value to a specific parameter name
+      const parameterNames = ["Time", "Battery Percentage", "Battery Status", "Battery Voltage", "Distance", "RSSI", "SNR" ];
+      
+      // Iterate over the dataArray and print each value with its corresponding parameter name
+      dataArray.forEach((item, index) => {
+        ctx.textAlign = 'left';
+        ctx.fillStyle = 'black';
+        ctx.font = '36px Arial';
         
-        // Append unit if available, otherwise just print the value
-        const valueWithUnit = `${data[key]}${units[key] ? ` ${units[key]}` : ''}`;
-        ctx.fillText(`${key}: ${valueWithUnit}`, textX, textY);
+        // Display the parameter name and its corresponding value
+        ctx.fillText(`${parameterNames[index]}: ${item.value}`, textX, textY);
         textY += lineHeight;
       });
-      
-      // Convert the D3 chart into a texture and apply it to the plane
+    
+      // Convert the canvas to a texture and apply it to the plane
       const texture = new THREE.CanvasTexture(canvas);
       texture.needsUpdate = true;
     
@@ -128,7 +134,6 @@
     }
     
     
-
     async function fetchAndRenderChart() {
       const chartData = await fetch('/water-height-last-2-days').then(res => res.json());
 
@@ -171,7 +176,7 @@
                   .range([height + margin.top, margin.top]);
     
       // Define the threshold value
-      const thresholdValue = 3000;
+      const thresholdValue = 4000;
       
       // Draw the threshold line
       const thresholdY = y(thresholdValue);
