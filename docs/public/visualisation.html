@@ -112,8 +112,18 @@
       }
     
       // Map each value to a specific parameter name
-      const parameterNames = ["Time", "Battery Percentage", "Battery Status", "Battery Voltage", "Distance", "RSSI", "SNR" ];
+      const parameterNames = ["Time", "Battery Percentage", "Battery Status", "Battery Voltage", "Water Level", "RSSI", "SNR" ];
       
+      const units = [
+      "",   // Time has no unit
+      "%",  // Battery Percentage
+      "",   // Battery Status has no unit
+      "V",  // Battery Voltage
+      "m",  // Distance or Water Level in meters
+      "dB", // RSSI in decibels
+      "dBm" // SNR in decibels-milliwatts
+    ];
+
       // Iterate over the dataArray and print each value with its corresponding parameter name
       dataArray.forEach((item, index) => {
         ctx.textAlign = 'left';
@@ -121,7 +131,7 @@
         ctx.font = '36px Arial';
         
         // Display the parameter name and its corresponding value
-        ctx.fillText(`${parameterNames[index]}: ${item.value}`, textX, textY);
+        ctx.fillText(`${parameterNames[index]}: ${item.value} ${units[index]}`, textX, textY);
         textY += lineHeight;
       });
     

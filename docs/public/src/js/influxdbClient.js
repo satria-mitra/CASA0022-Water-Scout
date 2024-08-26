@@ -52,13 +52,19 @@ async function fetchLatestBatteryData() {
             results.push({
               time: o._time,
               value: o._value,
+              field: o._field,
             });
           },
           error(error) {
             console.error('Query failed', error);
             reject(error);
           },
-          complete() {
+          complete(){
+            // Recalculate the distance value if present
+            const distanceEntry = results.find(entry => entry.field === 'distance');
+            if (distanceEntry) {
+              distanceEntry.value = (distanceEntry.value * -1) + 4500;
+            }
             resolve(results);
           }
         });

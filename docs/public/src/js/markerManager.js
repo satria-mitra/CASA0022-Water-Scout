@@ -67,6 +67,14 @@ AFRAME.registerComponent('registerevents', {
             }
             const data = await response.json();
             console.log('Fetched data from InfluxDB:', data);
+
+        // Recalculate the distance value
+        const calculatedDistance = (data.distance * -1) + 4500;
+        console.log('Calculated Distance:', calculatedDistance);
+
+        // Optionally, update the data object with the calculated distance
+        data.calculatedDistance = calculatedDistance;
+
             return data;
         } catch (error) {
             console.error('Error fetching data from server:', error);
@@ -76,7 +84,7 @@ AFRAME.registerComponent('registerevents', {
 
     updateDisplay: function(marker, data) {
         if (data.distance !== undefined) {
-            marker.querySelector('#distance-text_' + marker.id).setAttribute('value', 'Water Level: ' + data.distance/1000 + 'm');
+            marker.querySelector('#distance-text_' + marker.id).setAttribute('value', 'Water Level: ' + data.calculatedDistance/1000 + 'm');
         }
 
         if (data.battery_voltage !== undefined) {
@@ -91,12 +99,11 @@ AFRAME.registerComponent('registerevents', {
         }
     },
 
-    updatePlanePosition: function(model, distance) {
-        console.log('Updating Plane position based on distance:', distance);
-        console.log("distance value :", distance);
+    updatePlanePosition: function(model, calculatedDistance) {
+        console.log('Updating Plane position based on distance:', calculatedDistance);
+        console.log("distance value :", calculatedDistance);
         // Calculate the y position based on the distance
-        //var calculatedDistance = distance* -1 + 4500;
-        //const yPosition = -1.2 + (calculatedDistance / 7000) * 2.2;
+        const yPosition = 0.00026667 * calculatedDistance - 1.2;
 
         // Traverse the model and update the y position and color of the plane
         model.traverse((node) => {
@@ -105,7 +112,7 @@ AFRAME.registerComponent('registerevents', {
             }
             if (node.name === 'Plane' && node.type === 'Mesh') {
                 console.log('Plane found:', node);
-                //node.position.y = yPosition; // Update the y position based on the distance
+                node.position.y = yPosition; // Update the y position based on the distance
                 node.material.color.r= 100/255; // Change the color to light blue
                 node.material.color.g= 240/255; // Change the color to light blue
                 node.material.color.b= 255/255; // Change the color to light blue
