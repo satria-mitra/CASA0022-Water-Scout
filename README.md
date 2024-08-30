@@ -1,7 +1,7 @@
 <h1 style="text-align: center;">Water Scout: A LoRaWAN-Based Water Height Monitoring and Visualization System for Urban Waterways</h1>
 
 
-<p align="center">A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc)</p>
+<p align="center">A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc) </p>
 <p align="center">Centre for Advanced Spatial Analysis, Bartlett Faculty of the Built Environment</p>
 <p align="center">University College London </p>
 <p align="center">2023/2024 </p>
