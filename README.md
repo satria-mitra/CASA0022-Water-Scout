@@ -7,7 +7,7 @@ A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospec
 
 ##
 
-This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic sensor to monitor the water level of the River Lea that flows below the House Mill. The data observed then transmitted to The Things Network and published to MQTT Client. A 3D visualisation web page using WebXR was built to display the water level of The House Mill in 3D scene. The House Mill was created by [Dr. Gai Jorayev ](https://www.ucl.ac.uk/archaeology/people/gai-jorayev) and published on [Sketchfab](https://sketchfab.com/3d-models/house-mill-in-2019-c87dd07ab29f474aa491c88bc6b4956f)
+This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic sensor to monitor the water level of the River Lea that flows below the House Mill. The data observed then transmitted to The Things Network and published to MQTT Client. A 3D visualisation web page using WebXR was built to display the water level of The House Mill in 3D scene. The House Mill was created by [Dr. Gai Jorayev ](https://www.ucl.ac.uk/archaeology/people/gai-jorayev) and published on [Sketchfab](https://sketchfab.com/3d-models/house-mill-in-2019-c87dd07ab29f474aa491c88bc6b4956f). [The 3D visualisations web page](https://casa-0022-water-scout.vercel.app/) was hosted in the cloud for accessibility
 
 |                         Water Scout                           |                3D Visualisations                 |
 | :----------------------------------------------------------: | :-------------------------------------------: |
@@ -87,9 +87,25 @@ All the software applications are packed into one using Docker
 
 #### The 3D Visualisations
 
-![3D Visualisations](Assets/images/3d.png)
+<p align="center">3D Visualisations scene</p>
 
-Click here for [3D Visualisations page](https://casa-0022-water-scout.vercel.app/)
+<p align="center">
+<img src="Assets/images/3d.png" width="500">
+</p>
+
+Click here for [3D Visualisations](https://casa-0022-water-scout.vercel.app/visualisation.html)
+
+
+#### VR Mode for exhibition
+
+<p align="center">3D Visualisations scene</p>
+
+<p align="center">
+<img src="Assets/images/3d.png" width="500">
+</p>
+
+
+Click here for [VR Mode](https://casa-0022-water-scout.vercel.app/arjs.html)
 
 
 ## License
