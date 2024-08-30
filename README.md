@@ -1,12 +1,12 @@
 <h1 style="text-align: center;">Water Scout: A LoRaWAN-Based Water Height Monitoring and Visualization System for Urban Waterways</h1>
-##
+
 
 <p style="text-align: center;">A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc)</p>
 <p style="text-align: center;">Centre for Advanced Spatial Analysis, Bartlett Faculty of the Built Environment</p>
 <p style="text-align: center;">University College London </p>
 <p style="text-align: center;">2023/2024 </p>
 
-##
+
 This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic sensor to monitor the water level of the River Lea that flows below the House Mill, East London
 
 |                         Water Scout                           |                3D Visualisations                 |
@@ -81,29 +81,16 @@ Software:
 
 All the software applications are packed into one using Docker
 
-### Hardware PCB and schematic
 
-<p align="center">
-<img src="/PCB/PCB-assembeled.jpg" width="500">
-</p>
-
-<p align="center">
-<img src="/PCB/PCB.jpg" width="400">
-</p>
-
-![Hardware schematic](/PCB/Schematic.png)
 
 ## Results
 
 #### The Data Table
 
-![image-20230826014223380](/Docs/images/DataTable2.jpg)
+![3D Visualisations](Assets/images/3d.png)
 
-![image-20230826014128633](/Docs/images/DataTable-LoRa-RSSI.jpg)
+Click here for [3D Visualisations page](https://casa-0022-water-scout.vercel.app/)
 
- ![image-20230826014301770](/Docs/images/DataTable-LoRa-RSSI-indoor.jpg)
-
-![](/Docs/images/DataTable.jpg)
 
 ## License
 
