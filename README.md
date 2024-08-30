@@ -1,10 +1,10 @@
 <h1 style="text-align: center;">Water Scout: A LoRaWAN-Based Water Height Monitoring and Visualization System for Urban Waterways</h1>
 
 
-<p style="text-align: center;">A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc)</p>
-<p style="text-align: center;">Centre for Advanced Spatial Analysis, Bartlett Faculty of the Built Environment</p>
-<p style="text-align: center;">University College London </p>
-<p style="text-align: center;">2023/2024 </p>
+<p align="center">A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc)</p>
+<p align="center">Centre for Advanced Spatial Analysis, Bartlett Faculty of the Built Environment</p>
+<p align="center">University College London </p>
+<p align="center">2023/2024 </p>
 
 
 This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic sensor to monitor the water level of the River Lea that flows below the House Mill, East London
