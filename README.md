@@ -1,13 +1,13 @@
-<h1 style="text-align: center;">Water Scout: A LoRaWAN-Based Water Height Monitoring and Visualization System for Urban Waterways</h1>
+<h1 align="center">Water Scout: A LoRaWAN-Based Water Height Monitoring and Visualization System for Urban Waterways</h1>
 
 
-<p>A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc)</p>
+A dissertation for an [MSc Connected Environments](https://www.ucl.ac.uk/prospective-students/graduate/taught-degrees/connected-environments-msc)
 <p>Centre for Advanced Spatial Analysis, Bartlett Faculty of the Built Environment</p>
 <p>University College London </p>
-<p>2023/2024 </p>
 
+##
 
-This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic sensor to monitor the water level of the River Lea that flows below the House Mill, East London
+This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic sensor to monitor the water level of the River Lea that flows below the House Mill. The data observed then transmitted to The Things Network and published to MQTT Client. A 3D visualisation web page using WebXR was built to display the water level of The House Mill in 3D scene. The House Mill was created by [Dr. Gai Jorayev ](https://www.ucl.ac.uk/archaeology/people/gai-jorayev) and published on [Sketchfab](https://sketchfab.com/3d-models/house-mill-in-2019-c87dd07ab29f474aa491c88bc6b4956f)
 
 |                         Water Scout                           |                3D Visualisations                 |
 | :----------------------------------------------------------: | :-------------------------------------------: |
@@ -53,10 +53,10 @@ This project utilised an Arduino 1310 with LoRaWAN communication and Ultrasonic 
 
 ## Project Overview
 
-![Final prototype](Assets/images/waterScout.png)
+<p align="center">Final prototype</p>
 
 <p align="center">
-<img src="/Docs/system-overview.drawio.png" width="500">
+<img src="Assets/images/waterScout.png" width="500">
 </p>
 
 ## Building
@@ -85,7 +85,7 @@ All the software applications are packed into one using Docker
 
 ## Results
 
-#### The Data Table
+#### The 3D Visualisations
 
 ![3D Visualisations](Assets/images/3d.png)
 
