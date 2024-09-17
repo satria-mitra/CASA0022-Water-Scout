@@ -108,6 +108,21 @@ Click here for [3D Visualisations](https://casa-0022-water-scout.vercel.app/visu
 Click here for [VR Mode](https://casa-0022-water-scout.vercel.app/arjs.html)
 
 
+## Credits
+
+This project was built with inspiration and support from several open-source projects and contributions.
+
+Special thanks to [CASA CE](https://github.com/ucl-casa-ce) team especially for the [Artes](https://github.com/ucl-casa-ce/artes) repository which was instrumental in creating the VR mode for the Water Scout project. Portions of the code for the VR mode were adapted and modified from his project.
+
+Additionally, thanks to the open-source communities and contributors behind the following software and tools, which were essential in the development of this project:
+
+- Arduino
+- The Things Network
+- InfluxDB
+- Grafana
+- Docker
+
+
 ## License
 
 
